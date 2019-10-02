@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+
+<head>
+    <title>Remittance GUI</title>
+    <meta charset="utf-8">
+    <style type="text/css">
+        body {
+            font-family: Georgia, "Times New Roman",
+                Times, serif;
+            color: #053d96;
+            background-color: #98b9ed;
+            text-align: center;
+        }
+
+        h1 {
+            font-family: Helvetica, Geneva, Arial,
+                SunSans-Regular, sans-serif;
+                
+        }
+
+        h3 {
+            font-family: Helvetica, Geneva, Arial,
+                SunSans-Regular, sans-serif;
+                
+        }
+
+        a:link {
+            color: rgb(61, 27, 124);
+        }
+
+        a:visited {
+            color: #960561;
+        }
+
+        p.important {
+            border-style: solid;
+            border-width: 5px;
+            border-color: #053d96;
+        }
+
+        .button {
+            background-color: #053d96;
+            border: none;
+            color: white;
+            padding: 5px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+       
+        }
+
+        .display {
+            color: #053d96;
+            font-family: Georgia, "Times New Roman",
+                Times, serif;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .spaced {
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Alice's Admin Page</h1>
+    <div class="spaced">
+        <p class="important">
+            Alice can use her admin page to generate passwords which she then sends to Bob and Carol. The sending of the
+            passwords is not handled by this page. It is assumed to occur outside the scope of this DApp.
+            <br />
+            Alice can use this page to store the one-time passwords as valid hashed passwords in the contract. 
+            <br />
+            Alice can also use this page to initiate a transfer of money to Bob, which will only be complete after he
+            and Carol provide the correct passwords using Carol's page.
+            <br />
+            After both Bob and Carol provide the correct password on Carol's page, the ether Alice transferred will be
+            remitted to Carol. Carol will give Bob local currency.
+            <br />
+            Carol giving Bob local currency is also assumed to take place outside the scope of this DApp.
+        </p>
+    </div>
+    <div class="spaced">
+        <a target="_blank" rel="noopener noreferrer"
+            href="https://www.random.org/passwords/?num=2&len=8&format=html&rnd=new">Generate One-time Passwords</a>
+    </div>
+    <div class="spaced">  
+        Bob's Password <input name="passwordbob" type="password" />
+        Carol's Password <input name="passwordcarol" type="password" />
+        <button id="store" class="button">Store Passwords</button>
+    </div>
+    <div class="spaced">
+        Transfer <input name="amount" type="number" placeholder="0" /> Wei
+        <button id="initiateTransfer" class="button">Initiate Transfer</button>
+    </div>
+    <div class="display spaced">The Remittance Contract's escrow account has <span id="balanceEscrow">Loading...</span> Wei</div>
+    <div id="status" class="display spaced"></div>
+
+    <script src="js/app.js"></script>
+
+</body>
+
+</html>
