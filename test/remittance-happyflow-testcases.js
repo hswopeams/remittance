@@ -66,6 +66,7 @@ contract("Remittance Happy Flow Test", async accounts => {
     });
 
     it('should allow Carol to withdraw funds from her escrow account if she and Bob provide the correct passwords', async () => {
+        const startingAccountBalanceCarol = new BN(await web3.eth.getBalance(carol));
         const hashedPassword1 = web3.utils.soliditySha3(passwordBob);
         const hashedPassword2 = web3.utils.soliditySha3(passwordCarol);
         await instance.storeHashedPasswords(hashedPassword1, hashedPassword2, {from: alice}); 
@@ -73,15 +74,23 @@ contract("Remittance Happy Flow Test", async accounts => {
         
         let  escrow = await instance.escrow();
         const startingEscrowBalance = escrow.amount;
-        const expectedBalance = startingEscrowBalance.add(new BN(2500));
+        const expectedEscrowBalance = startingEscrowBalance.add(new BN(2500));
     
         await instance.initiateTransfer({from: alice, value: 2500});
         escrow = await instance.escrow();
         const newEscrowBalance = escrow.amount;
 
-        expect(newEscrowBalance).to.eq.BN(expectedBalance);
+        expect(newEscrowBalance).to.eq.BN(expectedEscrowBalance);
 
         const txObj = await instance.withdrawFunds(passwordBob, passwordCarol, {from: carol});
+        const withdrawGasPrice = (await web3.eth.getTransaction(txObj.tx)).gasPrice;
+        const withdrawTxPrice = withdrawGasPrice * txObj.receipt.gasUsed;
+
+        //Carol's balance after calling withdrawFunds() = Carol's balance before calling withdrawFunds() plus amount withdrawn minus price of calling withdrawFunds()
+        const expectedBalanceCarol = startingAccountBalanceCarol.add(new BN(2500)).sub(new BN(withdrawTxPrice));
+        const newAccountBalanceCarol = new BN(await web3.eth.getBalance(carol))
+
+        expect(newAccountBalanceCarol).to.eq.BN(expectedBalanceCarol);
         
         truffleAssert.eventEmitted(txObj.receipt, 'LogFundsTransferred', (ev) => {    
             return ev.releasedTo == carol && expect(ev.amount).to.eq.BN(newEscrowBalance);

@@ -16,14 +16,19 @@ pragma solidity >=0.4.25 <0.6.0;
 
 import '@openzeppelin/contracts/ownership/Ownable.sol';
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-
-contract Remittance is Ownable {
+contract Remittance is Ownable, ReentrancyGuard {
     using SafeMath for uint256;
 
     bytes32 private hashedPasswordBob;
     bytes32 private hashedPasswordCarol;
 
+   /**
+    * This account holds funds in escrow for Carol between the time Alice initiates a  tranfer of funds
+    * to Bob and the time Carol withdraws funds. Carol and Bob must both provide their passwords in order for the
+    * funds to be released to Carol.
+    */
     struct Escrow {
         address payable account;
         uint256 amount;
@@ -63,7 +68,7 @@ contract Remittance is Ownable {
         _;
     }
 
-     function withdrawFunds(string memory password1, string memory password2) public onlyCorrectPasswords(password1, password2) {
+     function withdrawFunds(string memory password1, string memory password2) public nonReentrant onlyCorrectPasswords(password1, password2) {
         require(msg.sender == escrow.account, "Message sender does not match escrow account holder");
         uint256 amount = escrow.amount;
         require(amount > 0, "No funds in escrow account");
@@ -71,6 +76,7 @@ contract Remittance is Ownable {
         hashedPasswordBob = 0;
         hashedPasswordCarol = 0;
         emit LogFundsTransferred(escrow.account, amount);
-        msg.sender.transfer(amount);
+        (bool success, ) = msg.sender.call.value(amount)("");
+        require(success, "Transfer failed.");
     }
 }
