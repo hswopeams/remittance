@@ -50,7 +50,6 @@ window.addEventListener('load', async function() {
         $("#store").click(store);
         $("#initiateTransfer").click(initiateTransfer);
         $("#withdraw").click(withdrawFunds);
-        $("#myPopup").click(myFunction);
         
     } catch(err) {
         // Never let an error go unlogged.
@@ -242,10 +241,4 @@ const withdrawFunds = async function() {
         console.error(err);
     }
     
-};
-
-const myFunction = async function(){
-    console.log("inside myFunction");
-    var popup = document.getElementById("myPopup");
-    popup.classList.toggle("show");
 };
