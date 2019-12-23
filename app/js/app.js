@@ -5,6 +5,7 @@ const $ = require("jquery");
 // Not to forget our built contract
 const remittanceJson = require("../../build/contracts/Remittance.json");
 require("file-loader?name=../index.html!../index.html");
+require("file-loader?name=../exchangeshop.html!../exchangeshop.html");
 
 // Supports Metamask, and other wallets that provide / inject 'ethereum' or 'web3'.
 if (typeof window.ethereum !== 'undefined' || typeof window.web3 !== 'undefined') {
@@ -37,17 +38,17 @@ window.addEventListener('load', async function() {
         $("#balanceEscrow").html(escrow.amount.toString(10));
 
         //Set up Carol
-        const carol = accounts[2];
+        const carol = accounts[3];
         const balanceCarol = await web3.eth.getBalance(carol);
+        console.log("carol's account", carol);
 
         //Only displayed on Carol's page
         $("#balanceCarol").html(balanceCarol);
 
         //Pre-populate Carol's account number
-        $("input[name='account']").val(carol);
+       // $("input[name='account']").val(carol);
 
         // We wire it when the system looks in order.
-        $("#store").click(store);
         $("#initiateTransfer").click(initiateTransfer);
         $("#withdraw").click(withdrawFunds);
         
@@ -56,63 +57,6 @@ window.addEventListener('load', async function() {
         console.error(err);
     }
 });
-
-const store = async function() {
-    // Sometimes you have to force the gas amount to a value you know is enough because
-    // `web3.eth.estimateGas` may get it wrong.
-    console.log("inside store");
-    const gas = 300000;
-    try {
-        const accounts = await (/*window.ethereum ?
-            window.enable() ||*/
-            web3.eth.getAccounts());
-        if (accounts.length == 0) {
-            throw new Error("No account with which to transact");
-        }
-
-        const instance = await Remittance.deployed();
-
-        const hashedPasswordBob = web3.utils.soliditySha3($("input[name='passwordbob']").val());
-        const hashedPasswordCarol = web3.utils.soliditySha3($("input[name='passwordcarol']").val());
-
-        // We simulate the real call and see whether this is likely to work.
-        // No point in wasting gas if we have a likely failure.
-        const success = await instance.storeHashedPasswords.call(
-            hashedPasswordBob,
-            hashedPasswordCarol,
-            { from: window.account, gas: gas });
-
-        if (!success) {
-            throw new Error("The transaction will fail anyway, not sending");
-        }
-
-        // Ok, we move onto the proper action.
-        const txObj = await instance.storeHashedPasswords (
-            hashedPasswordBob,
-            hashedPasswordCarol,
-            { from: window.account, gas: gas })
-            .on(
-                "transactionHash",
-                txHash => $("#status").html("Transaction on the way " + txHash)
-            );
-        // Now we got the mined tx.
-        const receipt = txObj.receipt;
-        console.log("got receipt", receipt);
-        if (!receipt.status) {
-            console.error("Wrong status");
-            console.error(receipt);
-            $("#status").html("There was an error in the tx execution, status not 1");
-        } else {
-            console.log(receipt.logs[0]);
-            $("#status").html("Passwords stored");
-        }
-       
-    } catch(err) {
-        $("#status").html(err.toString());
-        console.error(err);
-    }
-};
-
 const initiateTransfer = async function() {
     // Sometimes you have to force the gas amount to a value you know is enough because
     // `web3.eth.estimateGas` may get it wrong.
@@ -129,7 +73,7 @@ const initiateTransfer = async function() {
         // We simulate the real call and see whether this is likely to work.
         // No point in wasting gas if we have a likely failure.
         const success = await instance.initiateTransfer.call(
-            // Giving a string is fine
+            $("input[name='recipeientAddress']").val(),
             { from: window.account, value: $("input[name='amount']").val(), gas: gas });
 
         if (!success) {
@@ -138,14 +82,19 @@ const initiateTransfer = async function() {
 
         // Ok, we move onto the proper action.
         const txObj = await instance.initiateTransfer(
-            // Giving a string is fine
+            $("input[name='recipeientAddress']").val(),
             { from: window.account, value: $("input[name='amount']").val(), gas: gas })
-            //split takes time in real life, so we get the txHash immediately while it 
+            //transfer takes time in real life, so we get the txHash immediately while it 
             // is mined.
             .on(
                 "transactionHash",
                 txHash => $("#status").html("Transaction on the way " + txHash)
-            );
+            )
+            .on('receipt', function(receipt){
+                console.log("receipt in on receipt ", receipt);
+                console.log("events in on receipt ", receipt.events);
+
+            });
         // Now we got the mined tx.
         const receipt = txObj.receipt;
         console.log("got receipt", receipt);
@@ -158,8 +107,10 @@ const initiateTransfer = async function() {
             console.error(receipt);
             $("#status").html("There was an error in the tx execution, missing expected event");
         } else {
-            console.log(receipt.logs[0]);
+            console.log("logs ", receipt.logs[0]);
+            console.log("transactionID ", receipt.logs[0].args.transactionID.toString());
             $("#status").html("Transfer Initiated");
+            $("#displayTransactionId").html("Transaction ID is " +receipt.logs[0].args.transactionID.toString());
         }
         // Make sure we update the UI.
         const escrow = await instance.escrow();
@@ -188,15 +139,15 @@ const withdrawFunds = async function() {
         }
 
         const instance = await Remittance.deployed();
-        const carol = accounts[2];
+        const carol = accounts[3];
+        console.log("carol's account in withdrawFunds", carol);
 
         // We simulate the real call and see whether this is likely to work.
         // No point in wasting gas if we have a likely failure.
         const success = await instance.withdrawFunds.call(
-            $("input[name='passwordbob']").val(),
-            $("input[name='passwordcarol']").val(),
-            // Giving a string is fine
-            { from: $("input[name='account']").val(), gas: gas });
+            $("input[name='account']").val(),
+            $("input[name='transactionID']").val(),
+            { from: carol, gas: gas });
 
         if (!success) {
             throw new Error("The transaction will fail anyway, not sending");
@@ -204,9 +155,9 @@ const withdrawFunds = async function() {
 
         // Ok, we move onto the proper action.
         const txObj = await instance.withdrawFunds(
-            $("input[name='passwordbob']").val(),
-            $("input[name='passwordcarol']").val(),
-            { from: $("input[name='account']").val(), gas: gas })
+            $("input[name='account']").val(),
+            $("input[name='transactionID']").val(),
+            { from: carol, gas: gas })
             // withdrawFunds takes time in real life, so we get the txHash immediately while it 
             // is mined.
             .on(

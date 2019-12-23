@@ -1,17 +1,15 @@
 pragma solidity >=0.4.25 <0.6.0;
 
 /**
- * @dev Contract which provides a way for Alice to send funds to Bob via Carol's exchange shop.
- * Alice sends Ether, Carol exchanges the Ether for a local currency and gives the currency to Bob.
- * Alice gives Bob and Carol each a password that must be revealed in order to do the exchange. Alice initiates the transfer.
- * Ether is put in Carol's escrow account. Bob and Carol both provide their passwords using a GUI. The Ether in escrow is
- * released to Carol. Presumably, Carol gives Bob cash in local currency, but that happens outside the scope of the Dapp.
- * 
- * The passwords are generated using a link to a random.org page. This simulates Alice generating and
- * sending passwords to Bob and Carol.  They are hashed offchain and then stored in hashed format in the contract.
- * 
- * This solution is very insecure (everyone can see the passwords), but I can't think of any other way to do
- * it and still meet the project requirements.
+ * @dev Contract which provides a way for Person A to send funds to Person B via Carol's exchange shop.
+ * Person A sends Ether, Carol exchanges the Ether for a local currency and gives the currency to Person B.
+ * Person A initiats the transfer, indicating for whom the funds are intended.
+ * Ether is put in Carol's escrow account. Person B goes to Carol's exchange shop. Carol withdraws funds, providing her own address and
+ * the address of the receiver for verification purposes.
+ * Carol gives Person B cash in local currency, but that happens outside the scope of the Dapp.
+ * This gets rid of the insecure password issue, but begs the question why use the exchange shop at all and not just remit funds to
+ * the receivers address.
+ * Any party can remit funds to any other party in this way.
  */
 
 import '@openzeppelin/contracts/ownership/Ownable.sol';
@@ -21,8 +19,8 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 contract Remittance is Ownable, ReentrancyGuard {
     using SafeMath for uint256;
 
-    bytes32 private hashedPasswordBob;
-    bytes32 private hashedPasswordCarol;
+   // bytes32 private hashedPasswordBob;
+    //bytes32 private hashedPasswordCarol;
 
    /**
     * This account holds funds in escrow for Carol between the time Alice initiates a  tranfer of funds
@@ -34,49 +32,66 @@ contract Remittance is Ownable, ReentrancyGuard {
         uint256 amount;
     }
 
+    struct Transaction {
+        address payable fromAccount;
+        address payable toAccount;
+        uint256 amount;
+    }
+
+    uint256 public numTransactions;
+    mapping (uint256 => Transaction) public transactions;
+
     Escrow public escrow;
     
-    event LogTransferInitiated(address indexed sender, uint256 amount);
+    event LogTransferInitiated(address indexed sender, address indexed receiver, uint256 amount, uint256 transactionID);
     event LogFundsTransferred(address indexed releasedTo, uint256 amount);
 
-    constructor(address payable remittanceAccountHolder) public payable {
-        escrow = Escrow(remittanceAccountHolder, 0);
+    constructor(address payable escrowAccountHolder) public payable {
+        escrow = Escrow(escrowAccountHolder, 0);
     }
 
     function() external {
         revert("Falback function not available");
     }
 
-    function storeHashedPasswords(bytes32 hashedBob, bytes32 hashedCarol) public onlyOwner returns (bool) {
-        hashedPasswordBob = hashedBob;
-        hashedPasswordCarol = hashedCarol;
-        return true;
-    }
-
-    function initiateTransfer() public payable onlyOwner {
+    function initiateTransfer(address payable receiver) public payable {
+        require(receiver != address(0), "Receiver is the zero address");
         require(msg.value > 0, "No Ether sent");
         escrow.amount = escrow.amount.add(msg.value);
-        emit LogTransferInitiated(msg.sender, escrow.amount);
-
+        numTransactions++;
+        uint256 transactionID = numTransactions;
+        transactions[transactionID] = Transaction(msg.sender, receiver, msg.value);
+        emit LogTransferInitiated(msg.sender, receiver, msg.value, transactionID);
     }
 
-    modifier onlyCorrectPasswords(string  memory password1, string memory password2) {
-        require(bytes(password1).length > 0 && bytes(password1).length > 0, "Cannot verify passwords");
-        bytes32 hashed1 = keccak256(abi.encodePacked(password1));
-        bytes32 hashed2 = keccak256(abi.encodePacked(password2));
-        require(hashedPasswordBob == hashed1 && hashedPasswordCarol == hashed2, "One or both passwords not correct");
+
+    /* Receiver must verify his identity as the address to whom sender intendend the funds to go. */
+    modifier hasValidDetails(address receiver, uint transactionID){
+        require(msg.sender != address(0) && receiver != address(0), "Addresses must not be zero address");
+        require(msg.sender == escrow.account, "Message sender does not match escrow account holder");
+        require(transactionID != 0, "Transaction ID not provided");
+        Transaction storage transaction = transactions[transactionID];
+        require(transaction.toAccount == receiver, "Receiver address does not match transaction receiver address");
         _;
     }
 
-     function withdrawFunds(string memory password1, string memory password2) public nonReentrant onlyCorrectPasswords(password1, password2) {
-        require(msg.sender == escrow.account, "Message sender does not match escrow account holder");
-        uint256 amount = escrow.amount;
-        require(amount > 0, "No funds in escrow account");
-        escrow.amount = 0;
-        hashedPasswordBob = 0;
-        hashedPasswordCarol = 0;
+      /* Funds get remitted to escrow account holder (Carol in this case). Carol gives cash to recipient out-of process. */
+     function withdrawFunds(address receiver, uint transactionID) public nonReentrant hasValidDetails(receiver, transactionID) {  
+        Transaction storage transaction = transactions[transactionID];
+        uint256 amount = transaction.amount;
+        
+        require(amount > 0 && escrow.amount >= amount, "Remittance funds not available");
+       
+        escrow.amount = escrow.amount.sub(amount);
+       
         emit LogFundsTransferred(escrow.account, amount);
+  
+        //functional delete. Set values in struct to 0 so funds can't be remitted more than once.
+        delete transactions[transactionID];
+
         (bool success, ) = msg.sender.call.value(amount)("");
         require(success, "Transfer failed.");
+       
+       
     }
 }

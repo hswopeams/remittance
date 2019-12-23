@@ -17,16 +17,20 @@ contract("Remittance Error Test", async accounts => {
     // Runs before all tests in this block.
     before("setting up test data", async () => {
         //Set up accounts for parties. In truffel owner = accounts[0]. In this case, Alice is the owner
-        [alice,bob,carol] = accounts; 
-        passwordBob = "w5S2hsdN";//generated using random.org
-        passwordCarol = "mUTD2PDG"//generated using random.org
+        //[alice,bob,carol] = accounts; 
+        [owner,alice,bob,carol,dan,ellen,frank] = accounts; 
+        ZERO_ADDRESS =  '0x0000000000000000000000000000000000000000';
+        //passwordBob = "w5S2hsdN";//generated using random.org
+        //passwordCarol = "mUTD2PDG"//generated using random.org
+  
+        assert.isAtLeast(accounts.length,5);
 
-        assert.isAtLeast(accounts.length,3);
+
     });
 
      //Run before each test case
      beforeEach("deploying new instance", async () => {
-        instance = await Remittance.new(accounts[2], { from: alice });
+        instance = await Remittance.new(accounts[3], { from: owner });
     });
 
     it('should revert when the fallback function is called', async () => {
@@ -39,93 +43,58 @@ contract("Remittance Error Test", async accounts => {
         );   
     });
 
-    it('should only allow owner (Alice) to call certain functions', async () => {    
-        const hashedPassword1 = web3.utils.soliditySha3("blah");
-        const hashedPassword2 = web3.utils.soliditySha3("blah");
-        await truffleAssert.reverts(
-            instance.storeHashedPasswords(hashedPassword1, hashedPassword2, {from: carol}),
-            "Ownable: caller is not the owner"
-        );   
-
-        await truffleAssert.reverts(
-            instance.initiateTransfer({from: accounts[4], value: 2500}),
-            "Ownable: caller is not the owner"
-        );        
-    });
-
+    
     
     it('should revert if no ether is sent when initiating transfer', async () => {
         await truffleAssert.reverts(
-            instance.initiateTransfer({from: alice}),
+            instance.initiateTransfer(bob, {from: alice}),
             "No Ether sent"
         );        
     });
 
-    it('should only allow Carol to withdraw funds', async () => {
-        const hashedPassword1 = web3.utils.soliditySha3(passwordBob);
-        const hashedPassword2 = web3.utils.soliditySha3(passwordCarol);
-
-        await instance.storeHashedPasswords(hashedPassword1, hashedPassword2, {from: alice}); 
-        await instance.initiateTransfer({from: alice, value: 2500});
      
-
+    it('should revert if receiver is zero address when initiating transfer', async () => {
         await truffleAssert.reverts(
-            instance.withdrawFunds(passwordBob, passwordCarol, {from: bob}),
+            instance.initiateTransfer(ZERO_ADDRESS, {from: alice, value: 2500}),
+            "Receiver is the zero address"
+        );        
+    });
+
+    it('should revert if the receiver or message sender are the zero address when withdrawing funds', async () => {
+        await truffleAssert.reverts(
+            instance.withdrawFunds(ZERO_ADDRESS, 11111, {from: carol}),
+            "Addresses must not be zero address"
+        );        
+    });
+
+    it('should only allow Carol to withdraw funds', async () => {
+        await truffleAssert.reverts(
+            instance.withdrawFunds(dan, 11111, {from: bob}),
             "Message sender does not match escrow account holder"
         );        
     });
-
-    it('should only allow Carol to withdraw funds if she and Bob provide the correct passwords', async () => {
-        const hashedPassword1 = web3.utils.soliditySha3(passwordBob);
-        const hashedPassword2 = web3.utils.soliditySha3(passwordCarol);
-
-        await instance.storeHashedPasswords(hashedPassword1, hashedPassword2, {from: alice}); 
-        await instance.initiateTransfer({from: alice, value: 2500});
-     
+    
+    it('should revert if transaciotnID is not provided when withdrawing funds', async () => {
         await truffleAssert.reverts(
-            instance.withdrawFunds("foo", "bar", {from: carol}),
-            "One or both passwords not correct"
-        );        
-    });
-  
-    it('should only allow Carol to withdraw funds if a transfer has been initiated', async () => {
-        const hashedPassword1 = web3.utils.soliditySha3(passwordBob);
-        const hashedPassword2 = web3.utils.soliditySha3(passwordCarol);
-
-        await instance.storeHashedPasswords(hashedPassword1, hashedPassword2, {from: alice}); 
-        
-        await truffleAssert.reverts(
-            instance.withdrawFunds(passwordBob, passwordCarol, {from: carol}),
-            "No funds in escrow account"
+            instance.withdrawFunds(dan, 0,{from: carol}),
+            "Transaction ID not provided"
         );        
     });
 
-    it('should only allow passwords to be used once', async () => {
-        const hashedPassword1 = web3.utils.soliditySha3(passwordBob);
-        const hashedPassword2 = web3.utils.soliditySha3(passwordCarol);
-        await instance.storeHashedPasswords(hashedPassword1, hashedPassword2, {from: alice}); 
-        
-        
-        let  escrow = await instance.escrow();
-        const startingEscrowBalance = escrow.amount;
-        const expectedBalance = startingEscrowBalance.add(new BN(2500));
-    
-        await instance.initiateTransfer({from: alice, value: 2500});
-        escrow = await instance.escrow();
-        const newEscrowBalance = escrow.amount;
+    it('should not allow withdrawal of funds if receiver does not match transaction receiver', async () => {
+        let transactionID;
+        const txObj = await instance.initiateTransfer(bob, {from: alice, value: 2500});
 
-        expect(newEscrowBalance).to.eq.BN(expectedBalance);
-
-        const txObj = await instance.withdrawFunds(passwordBob, passwordCarol, {from: carol});
-
-        await truffleAssert.reverts(
-            instance.withdrawFunds(passwordBob, passwordCarol, {from: carol}),
-            "One or both passwords not correct"
-        );   
-
-        
-    
-    });
+        truffleAssert.eventEmitted(txObj.receipt, 'LogTransferInitiated', (ev) => {    
+            transactionID = ev.transactionID;
+            return ev.sender == alice && ev.receiver == bob && expect(ev.amount).to.eq.BN(2500) && expect(ev.transactionID).to.be.gt.BN(0);
+        }); 
+         
+         await truffleAssert.reverts(
+             instance.withdrawFunds(dan, transactionID, {from: carol}),
+             "Receiver address does not match transaction receiver address"
+         );        
+     });
   
 });//end test contract
 

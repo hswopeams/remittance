@@ -4,6 +4,7 @@
 <head>
     <title>Remittance GUI</title>
     <meta charset="utf-8">
+
     <style type="text/css">
         body {
             font-family: Georgia, "Times New Roman",
@@ -16,13 +17,13 @@
         h1 {
             font-family: Helvetica, Geneva, Arial,
                 SunSans-Regular, sans-serif;
-                
+
         }
 
         h3 {
             font-family: Helvetica, Geneva, Arial,
                 SunSans-Regular, sans-serif;
-                
+
         }
 
         a:link {
@@ -47,7 +48,7 @@
             text-align: center;
             text-decoration: none;
             display: inline-block;
-       
+
         }
 
         .display {
@@ -63,14 +64,16 @@
             margin-bottom: 20px;
         }
     </style>
+
+
 </head>
 
 <body>
-    <h1>Sender's Page</h1>
+    <h1>Carol's Exchange Shop</h1>
     <div class="spaced">
-        <p class="important">
-            A sender can use this page to initiate a transfer of money to any recipient. The transfer is completed when the recipient goes to Carol's Exchange Shop
-            and provides his or her address and transaction ID.
+            <p class="important">
+            Carol can use this page to withdraw the funds transferred by any sender who initiated a funds transfer to her escrow account. The recipient must provide his or her
+            address and the transaction ID of the transfer.
             <br />
             After the recipeient's address and the transaciton ID are verified, the ether the sender transferred will te remitted to
             Carol. Carol will then give the recipeient local currency.
@@ -78,14 +81,13 @@
             Carol giving the recipent local currency is assumed to take place out of the scope of this DApp.
         </p>
     </div>
-    <div class="spaced">
-        Transfer <input name="amount" type="number" placeholder="0" /> Wei to <input name="recipeientAddress" type="text" placeholder="0x0000000000000000000000000000000000000000" /> 
-        <button id="initiateTransfer" class="button">Initiate Transfer</button>
+    <div class="display spaced">Carol has <span id="balanceCarol">Loading...</span> Wei in funds.</div>
+    Recipient Account <input name="account" type="text" size="50" placeholder="0x0000000000000000000000000000000000000000" />
+    Transaction ID <input name="transactionID" type="number" size="50" placeholder="0" />
+    <button class="button" id="withdraw">Withdraw</button>
     </div>
     <div class="display spaced">The Remittance Contract's escrow account has <span id="balanceEscrow">Loading...</span> Wei</div>
     <div id="status" class="display spaced"></div>
-    <div id="displayTransactionId" class="display spaced"></div>
-
     <script src="js/app.js"></script>
 
 </body>
