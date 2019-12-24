@@ -1,6 +1,7 @@
 pragma solidity >=0.4.25 <0.6.0;
 
 /**
+ * @title Remittance
  * @dev Contract which provides a way for Person A to send funds to Person B via Carol's exchange shop.
  * Person A sends Ether, Carol exchanges the Ether for a local currency and gives the currency to Person B.
  * Person A initiats the transfer, indicating for whom the funds are intended.
@@ -10,22 +11,20 @@ pragma solidity >=0.4.25 <0.6.0;
  * This gets rid of the insecure password issue, but begs the question why use the exchange shop at all and not just remit funds to
  * the receivers address.
  * Any party can remit funds to any other party in this way.
+ * If the contract is "killed", the transactions can be retrieved to keep track of which transactions not yet carried out
  */
 
 import '@openzeppelin/contracts/ownership/Ownable.sol';
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "contracts/Killable.sol";
 
-contract Remittance is Ownable, ReentrancyGuard {
+contract Remittance is ReentrancyGuard, Killable {
     using SafeMath for uint256;
 
-   // bytes32 private hashedPasswordBob;
-    //bytes32 private hashedPasswordCarol;
-
    /**
-    * This account holds funds in escrow for Carol between the time Alice initiates a  tranfer of funds
-    * to Bob and the time Carol withdraws funds. Carol and Bob must both provide their passwords in order for the
-    * funds to be released to Carol.
+    * This account holds funds in escrow for Carol between the time Partion A initiates a tranfer of funds
+    * to Person B and the time Carol withdraws funds.
     */
     struct Escrow {
         address payable account;
@@ -54,7 +53,7 @@ contract Remittance is Ownable, ReentrancyGuard {
         revert("Falback function not available");
     }
 
-    function initiateTransfer(address payable receiver) public payable {
+    function initiateTransfer(address payable receiver) public payable whenNotPaused {
         require(receiver != address(0), "Receiver is the zero address");
         require(msg.value > 0, "No Ether sent");
         escrow.amount = escrow.amount.add(msg.value);
@@ -76,7 +75,7 @@ contract Remittance is Ownable, ReentrancyGuard {
     }
 
       /* Funds get remitted to escrow account holder (Carol in this case). Carol gives cash to recipient out-of process. */
-     function withdrawFunds(address receiver, uint transactionID) public nonReentrant hasValidDetails(receiver, transactionID) {  
+     function withdrawFunds(address receiver, uint transactionID) public whenNotPaused nonReentrant hasValidDetails(receiver, transactionID) {
         Transaction storage transaction = transactions[transactionID];
         uint256 amount = transaction.amount;
         
@@ -91,7 +90,11 @@ contract Remittance is Ownable, ReentrancyGuard {
 
         (bool success, ) = msg.sender.call.value(amount)("");
         require(success, "Transfer failed.");
-       
-       
+   
+    }
+
+    function safeguardFunds(address payable beneficiary) public onlyOwner whenPaused returns(bool) {
+        escrow.amount = 0;
+        super.safeguardFunds(beneficiary);
     }
 }

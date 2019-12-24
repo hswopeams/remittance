@@ -16,14 +16,12 @@ contract("Remittance Error Test", async accounts => {
   
     // Runs before all tests in this block.
     before("setting up test data", async () => {
-        //Set up accounts for parties. In truffel owner = accounts[0]. In this case, Alice is the owner
-        //[alice,bob,carol] = accounts; 
-        [owner,alice,bob,carol,dan,ellen,frank] = accounts; 
-        ZERO_ADDRESS =  '0x0000000000000000000000000000000000000000';
-        //passwordBob = "w5S2hsdN";//generated using random.org
-        //passwordCarol = "mUTD2PDG"//generated using random.org
+        //Set up accounts for parties. In truffel owner = accounts[0]. 
+        [owner,alice,bob,carol,dan,ellen,frank, safeguard] = accounts; 
   
-        assert.isAtLeast(accounts.length,5);
+        assert.isAtLeast(accounts.length,6);
+
+        ZERO_ADDRESS =  '0x0000000000000000000000000000000000000000';
 
 
     });
@@ -95,6 +93,51 @@ contract("Remittance Error Test", async accounts => {
              "Receiver address does not match transaction receiver address"
          );        
      });
+
+     it('should not allow certain functions to be called if the contract is paused', async () => {
+        await instance.pause({ from: owner });
+      
+        await truffleAssert.reverts(
+            instance.initiateTransfer(ellen, {from: dan, value: 2500}),
+            "Pausable: paused"
+        );
+
+        
+        await truffleAssert.reverts(
+            instance.withdrawFunds(ellen, 1, {from: carol}),
+            "Pausable: paused"
+        );  
+        
+    });
+
+    it('should not allow safeguardFunds function to be called if the contract IS NOT paused', async () => {
+      
+        await truffleAssert.reverts(
+            instance.safeguardFunds(safeguard),
+            "Pausable: not paused"
+        );
+        
+    });
+
+    it('should only allow owner to call safeguarFunds', async () => {
+        await instance.pause({ from: owner });
+
+        await truffleAssert.reverts(
+            instance.safeguardFunds(safeguard, {from: carol}),
+            "Ownable: caller is not the owner"
+        );
+        
+    });
+
+    it('should revert if safeguard transfer cannot be completed' , async () => {
+        await instance.pause({ from: owner });
+
+        await truffleAssert.reverts(
+            instance.safeguardFunds(ZERO_ADDRESS, {from: owner}),
+            "Address must not be zero address"
+        );
+        
+    });
   
 });//end test contract
 

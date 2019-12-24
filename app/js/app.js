@@ -22,7 +22,6 @@ const Remittance = truffleContract(remittanceJson);
 Remittance.setProvider(web3.currentProvider);
 
 window.addEventListener('load', async function() {
-    console.log("inside addEventListener");
     try {
         const accounts = await (/*window.ethereum ?
             window.enable() ||*/
@@ -44,9 +43,6 @@ window.addEventListener('load', async function() {
 
         //Only displayed on Carol's page
         $("#balanceCarol").html(balanceCarol);
-
-        //Pre-populate Carol's account number
-       // $("input[name='account']").val(carol);
 
         // We wire it when the system looks in order.
         $("#initiateTransfer").click(initiateTransfer);
@@ -97,7 +93,7 @@ const initiateTransfer = async function() {
             });
         // Now we got the mined tx.
         const receipt = txObj.receipt;
-        console.log("got receipt", receipt);
+      
         if (!receipt.status) {
             console.error("Wrong status");
             console.error(receipt);
@@ -108,7 +104,6 @@ const initiateTransfer = async function() {
             $("#status").html("There was an error in the tx execution, missing expected event");
         } else {
             console.log("logs ", receipt.logs[0]);
-            console.log("transactionID ", receipt.logs[0].args.transactionID.toString());
             $("#status").html("Transfer Initiated");
             $("#displayTransactionId").html("Transaction ID is " +receipt.logs[0].args.transactionID.toString());
         }
@@ -166,7 +161,7 @@ const withdrawFunds = async function() {
             );
         // Now we got the mined tx.
         const receipt = txObj.receipt;
-        console.log("got receipt", receipt);
+        
         if (!receipt.status) {
             console.error("Wrong status");
             console.error(receipt);
