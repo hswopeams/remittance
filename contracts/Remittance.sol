@@ -2,99 +2,89 @@ pragma solidity >=0.4.25 <0.6.0;
 
 /**
  * @title Remittance
- * @dev Contract which provides a way for Person A to send funds to Person B via Carol's exchange shop.
- * Person A sends Ether, Carol exchanges the Ether for a local currency and gives the currency to Person B.
- * Person A initiats the transfer, indicating for whom the funds are intended.
- * Ether is put in Carol's escrow account. Person B goes to Carol's exchange shop. Carol withdraws funds, providing her own address and
- * the address of the receiver for verification purposes.
- * Carol gives Person B cash in local currency, but that happens outside the scope of the Dapp.
- * This gets rid of the insecure password issue, but begs the question why use the exchange shop at all and not just remit funds to
- * the receivers address.
- * Any party can remit funds to any other party in this way.
- * If the contract is "killed", the transactions can be retrieved to keep track of which transactions not yet carried out
+ * @dev Contract which provides a way for Person A to send funds to Person B via any registered exchange shop.
+ * The owner of the contract must first register the exchange shop as a participating exchange shop and also assign the exchange shop's password.
+ * Person A sends Ether, the exchange shop proprietor exchanges the Ether for a local currency and gives the currency to Person B.
+ * Person A initiats the transfer, indicating for whom the funds are intended and assignes the password the recipeient will have to use in order to receive the funds.
+ * Person B goes to a registered exchange shop. The exchange shop proprietor withdraws funds, providing her own password, the recipeint's password, and the transaction ID.
+ * for verification purposes. The exchange shop proprietor gives Person B cash in local currency, but that happens outside the scope of the Dapp.
+ * Any party can remit funds to any other party using any registered eschange shop in this way.
+ * Passwords are hashed offline and only stored by the contract.
+ * If the contract is "killed", the transactions can be retrieved to keep track of which transactions have not yet been carried out
  */
 
 import '@openzeppelin/contracts/ownership/Ownable.sol';
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "contracts/Killable.sol";
+import "./Killable.sol";
 
-contract Remittance is ReentrancyGuard, Killable {
+contract Remittance is Killable {
     using SafeMath for uint256;
 
-   /**
-    * This account holds funds in escrow for Carol between the time Partion A initiates a tranfer of funds
-    * to Person B and the time Carol withdraws funds.
-    */
-    struct Escrow {
-        address payable account;
-        uint256 amount;
-    }
+    bytes32 constant nullPassword = 0x0000000000000000000000000000000000000000000000000000000000000000;
+    bytes32 private hashedPasswordBob;
+    bytes32 private hashedPasswordCarol;
+    uint256 public numTransactions;
+    mapping (uint256 => Transaction) public transactions;
+    mapping (address => bytes32) exchangeShops;
 
     struct Transaction {
         address payable fromAccount;
         address payable toAccount;
         uint256 amount;
+        bytes32 password;
     }
-
-    uint256 public numTransactions;
-    mapping (uint256 => Transaction) public transactions;
-
-    Escrow public escrow;
     
     event LogTransferInitiated(address indexed sender, address indexed receiver, uint256 amount, uint256 transactionID);
     event LogFundsTransferred(address indexed releasedTo, uint256 amount);
+    event LogExchangeShopRegistered(address indexed exchangeShop);
 
-    constructor(address payable escrowAccountHolder) public payable {
-        escrow = Escrow(escrowAccountHolder, 0);
+    constructor() public {
     }
 
     function() external {
         revert("Falback function not available");
     }
 
-    function initiateTransfer(address payable receiver) public payable whenNotPaused {
-        require(receiver != address(0), "Receiver is the zero address");
-        require(msg.value > 0, "No Ether sent");
-        escrow.amount = escrow.amount.add(msg.value);
-        numTransactions++;
-        uint256 transactionID = numTransactions;
-        transactions[transactionID] = Transaction(msg.sender, receiver, msg.value);
-        emit LogTransferInitiated(msg.sender, receiver, msg.value, transactionID);
+    function registerExchangeShop(address exchangeShop, bytes32 exchangeShopPassword) public onlyOwner returns (bool) {
+        require(exchangeShop != address(0), "Exchange shop is the zero address");
+        require(exchangeShopPassword != nullPassword, "Exchange shop password is invalid");
+        require(exchangeShops[exchangeShop] == nullPassword, "Exchange shop already registered");
+        exchangeShops[exchangeShop] = exchangeShopPassword;
+        emit LogExchangeShopRegistered(exchangeShop);
+        return true;
     }
 
+    function initiateTransfer(address payable recipient, bytes32 recipientPassword) public payable whenNotPaused {
+        require(recipient != address(0), "Recipient is the zero address");
+        require(recipientPassword != nullPassword, "Recipient password is invalid");
+        require(msg.value > 0, "No Ether sent");
+        uint256 transactionID = ++numTransactions;
+        transactions[transactionID] = Transaction(msg.sender, recipient, msg.value, recipientPassword);
+        emit LogTransferInitiated(msg.sender, recipient, msg.value, transactionID);
+    }
 
-    /* Receiver must verify his identity as the address to whom sender intendend the funds to go. */
-    modifier hasValidDetails(address receiver, uint transactionID){
-        require(msg.sender != address(0) && receiver != address(0), "Addresses must not be zero address");
-        require(msg.sender == escrow.account, "Message sender does not match escrow account holder");
-        require(transactionID != 0, "Transaction ID not provided");
+    modifier onlyCorrectPasswords(string memory recipientPassword, string memory exchangeShopPassword, uint transactionID) {
+        require(bytes(recipientPassword).length > 0 && bytes(exchangeShopPassword).length > 0, "Cannot verify passwords");
+        bytes32 hashedReecipientPassword = keccak256(abi.encodePacked(recipientPassword));
+        bytes32 hashedExchangeShopPassword = keccak256(abi.encodePacked(exchangeShopPassword));
         Transaction storage transaction = transactions[transactionID];
-        require(transaction.toAccount == receiver, "Receiver address does not match transaction receiver address");
+        require(transaction.password == hashedReecipientPassword && hashedExchangeShopPassword == exchangeShops[msg.sender], "One or both passwords or transactionID not correct");
         _;
     }
 
-      /* Funds get remitted to escrow account holder (Carol in this case). Carol gives cash to recipient out-of process. */
-     function withdrawFunds(address receiver, uint transactionID) public whenNotPaused nonReentrant hasValidDetails(receiver, transactionID) {
+     function withdrawFunds(string memory recipientPassword, string memory exchangeShopPassword, uint transactionID) public whenNotPaused onlyCorrectPasswords(recipientPassword, exchangeShopPassword, transactionID) {
         Transaction storage transaction = transactions[transactionID];
         uint256 amount = transaction.amount;
         
-        require(amount > 0 && escrow.amount >= amount, "Remittance funds not available");
+        require(amount > 0, "Remittance funds not available");
        
-        escrow.amount = escrow.amount.sub(amount);
-       
-        emit LogFundsTransferred(escrow.account, amount);
-  
+        emit LogFundsTransferred(msg.sender, amount);
+
         //functional delete. Set values in struct to 0 so funds can't be remitted more than once.
         delete transactions[transactionID];
 
         (bool success, ) = msg.sender.call.value(amount)("");
         require(success, "Transfer failed.");
    
-    }
-
-    function safeguardFunds(address payable beneficiary) public onlyOwner whenPaused returns(bool) {
-        escrow.amount = 0;
-        super.safeguardFunds(beneficiary);
     }
 }

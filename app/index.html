@@ -66,23 +66,22 @@
 </head>
 
 <body>
-    <h1>Sender's Page</h1>
+    <h1>Owner's Page</h1>
     <div class="spaced">
         <p class="important">
-            A sender can use this page to initiate a transfer of money to any recipient. The transfer is completed when the recipient goes to Carol's Exchange Shop
-            and provides his or her address and transaction ID.
-            <br />
-            After the recipeient's address and the transaciton ID are verified, the ether the sender transferred will te remitted to
-            Carol. Carol will then give the recipeient local currency.
-            <br />
-            Carol giving the recipent local currency is assumed to take place out of the scope of this DApp.
+           The owner of this contract can use this page to register known exchange shops.
         </p>
     </div>
     <div class="spaced">
-        Transfer <input name="amount" type="number" placeholder="0" /> Wei to <input name="recipeientAddress" type="text" placeholder="0x0000000000000000000000000000000000000000" /> 
-        <button id="initiateTransfer" class="button">Initiate Transfer</button>
+        <a target="_blank" rel="noopener noreferrer"
+            href="https://www.random.org/passwords/?num=2&len=8&format=html&rnd=new">Generate One-time Exchange Shop Password</a>
     </div>
-    <div class="display spaced">The Remittance Contract's escrow account has <span id="balanceEscrow">Loading...</span> Wei</div>
+    <div class="spaced">
+        Exchange Shop Address <input name="exchangeShopAddress" type="text" placeholder="0x0000000000000000000000000000000000000000" /> 
+        Exchange Shop Password <input name="passwordExchangeShop" type="password" />
+        <button id="registerExchangeShop" class="button">Register Exchange Shop</button>
+    </div>
+    <div class="display spaced">The Remittance Contract's balance is <span id="balanceContract">Loading...</span> Wei</div>
     <div id="status" class="display spaced"></div>
     <div id="displayTransactionId" class="display spaced"></div>
 
