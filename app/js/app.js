@@ -19,6 +19,7 @@ if (typeof window.ethereum !== 'undefined' || typeof window.web3 !== 'undefined'
     window.web3 = new Web3(new Web3.providers.HttpProvider('http://127.0.0.1:8545'));
 }
 
+const newExchangeShopPassword = web3.utils.randomHex(4);
 const Remittance = truffleContract(remittanceJson);
 Remittance.setProvider(web3.currentProvider);
 
@@ -36,8 +37,12 @@ window.addEventListener('load', async function() {
 
         const network = await web3.eth.net.getId();
         const instance = await Remittance.deployed();
+        //const newHashedExchangeShopPassword = web3.utils.soliditySha3({t: 'bytes', v: web3.utils.randomHex(4)});
 
+        console.log("newExchangeShopPassword ", newExchangeShopPassword);
+ 
         $("#balanceContract").html(await web3.eth.getBalance(instance.address));
+        $("#newExchangeShopPassword").html(newExchangeShopPassword);
 
         // We wire it when the system looks in order.
         $("#registerExchangeShop").click(registerExchangeShop);
@@ -202,12 +207,14 @@ const withdrawFunds = async function() {
         }
 
         const instance = await Remittance.deployed();
+        const hashedNewPasswordExchangeShop = web3.utils.soliditySha3($("input[name='newPasswordExchangeWithdraw']").val());
 
         // We simulate the real call and see whether this is likely to work.
         // No point in wasting gas if we have a likely failure.
         const success = await instance.withdrawFunds.call(
             $("input[name='passwordRecipientWithdraw']").val(),
             $("input[name='passwordExchangeWithdraw']").val(),
+            hashedNewPasswordExchangeShop,
             $("input[name='transactionID']").val(),
             { from: $("input[name='exchangeShopAddress']").val(), gas: gas });
         if (!success) {
@@ -218,6 +225,7 @@ const withdrawFunds = async function() {
         const txObj = await instance.withdrawFunds(
             $("input[name='passwordRecipientWithdraw']").val(),
             $("input[name='passwordExchangeWithdraw']").val(),
+            hashedNewPasswordExchangeShop,
             $("input[name='transactionID']").val(),
             { from: $("input[name='exchangeShopAddress']").val(), gas: gas })
             // withdrawFunds takes time in real life, so we get the txHash immediately while it 

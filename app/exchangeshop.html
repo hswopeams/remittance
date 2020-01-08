@@ -73,7 +73,8 @@
     <div class="spaced">
             <p class="important">
             A registered exchange shop proprietor can use this page to withdraw the funds transferred by any sender who initiated a funds transfer to a reciepient. The recipient must provide his or her
-            password and the transaction ID of the transfer. The registered exchange shop proprietor must also provide her password, which was generated when the owner registered her exchange shop.
+            password and the transaction ID of the transfer. The registered exchange shop proprietor must also provide her password, which was generated when the owner registered her exchange shop, and
+            a new password chosen by her.
             <br />
             After the passwords and the transaciton ID are verified, the ether the sender transferred will te remitted to
             the exchange shop proprietor. THe exchange shop proprietor. will then give the recipeient local currency.
@@ -81,11 +82,21 @@
             The exchange shop proprietor giving the recipent local currency is assumed to take place out of the scope of this DApp.
         </p>
     </div>
+    <div class="spaced">
+        <a target="_blank" rel="noopener noreferrer"
+            href="https://www.random.org/passwords/?num=2&len=8&format=html&rnd=new">Generate New One-time Exchange Shop Password</a>
+    </div>
     <div class="display spaced">Exchange shop has <span id="balanceExchangeShop">Loading...</span> Wei in funds.</div>
     Recipient Password <input name="passwordRecipientWithdraw" type="password" />
+    <br/>
     Transaction ID <input name="transactionID" type="number" size="50" placeholder="0" />
+    <br/>
     Exchange Shop Address <input name="exchangeShopAddress" type="text" placeholder="0x0000000000000000000000000000000000000000" /> 
+    <br/>
     Exchange Shop Password <input name="passwordExchangeWithdraw" type="password" />
+    <br/>
+    New Exchange Shop Hashed Password <input name="newPasswordExchangeWithdraw" type="password" />
+    <br/>
     <button class="button" id="withdraw">Withdraw</button>
     </div>
     <div class="display spaced">The Remittance Contract has <span id="balanceContract">Loading...</span> Wei</div>

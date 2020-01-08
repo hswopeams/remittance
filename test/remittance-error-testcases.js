@@ -29,6 +29,8 @@ contract("Remittance Error Test", async accounts => {
         PASSWORD_RECIPIENT_2 = "RKH33Trj";
         PASSWORD_EXCHANGE_SHOP_1 = "mUTD2PDG"
         PASSWORD_EXCHANGE_SHOP_2 = "X25WarFX"
+        PASSWORD_EXCHANGE_SHOP_3 = "Gqg5DuG2"
+        PASSWORD_EXCHANGE_SHOP_4 = "URULzLYB"
     });
 
      //Run before each test case
@@ -101,31 +103,44 @@ contract("Remittance Error Test", async accounts => {
     it('should revert if password is invlaid when initiating transfer', async () => {
         NULL_PASSWORDS.forEach( async item => {
             await truffleAssert.reverts(
-                instance.registerExchangeShop(carol, item, {from: owner}),
-                "Exchange shop password is invalid"
+                instance.initiateTransfer(bob, item, {from: alice, value: 2500}),
+                "Recipient password is invalid"
             );   
         });
     });
 
+    it('should revert if recipient password has already when initiating transfer', async () => {
+        const hashedPassword = web3.utils.soliditySha3(PASSWORD_RECIPIENT_1);
+
+        await instance.initiateTransfer(bob, hashedPassword, {from: alice, value: 2500});
+
+        await truffleAssert.reverts(
+            instance.initiateTransfer(bob, hashedPassword, {from: alice, value: 2500}),
+            "Recipient password has already been used"
+        );        
+    });
+
+
     it('should revert if recipient password is incorrect or empty', async () => {
         const hashedExchangeShopPassword = web3.utils.soliditySha3(PASSWORD_EXCHANGE_SHOP_1);
+        const hashedNewxchangeShopPassword = web3.utils.soliditySha3(PASSWORD_EXCHANGE_SHOP_2);
         const hashedRecipientPassword = web3.utils.soliditySha3(PASSWORD_RECIPIENT_1);
 
         await instance.registerExchangeShop(carol, hashedExchangeShopPassword, {from: owner});
         await instance.initiateTransfer(ellen, hashedRecipientPassword, {from: dan, value: 2500});
 
         await truffleAssert.reverts(
-            instance.withdrawFunds(PASSWORD_RECIPIENT_2, PASSWORD_EXCHANGE_SHOP_1, 1, {from: carol}),
+            instance.withdrawFunds(PASSWORD_RECIPIENT_2, PASSWORD_EXCHANGE_SHOP_1, hashedNewxchangeShopPassword, 1, {from: carol}),
             "One or both passwords or transactionID not correct"
         );      
 
         await truffleAssert.reverts(
-            instance.withdrawFunds(' ', PASSWORD_EXCHANGE_SHOP_1, 1, {from: carol}),
+            instance.withdrawFunds(' ', PASSWORD_EXCHANGE_SHOP_1, hashedNewxchangeShopPassword, 1, {from: carol}),
             "One or both passwords or transactionID not correct"
         ); 
 
         await truffleAssert.reverts(
-            instance.withdrawFunds('', PASSWORD_EXCHANGE_SHOP_1, 1, {from: carol}),
+            instance.withdrawFunds('', PASSWORD_EXCHANGE_SHOP_1, hashedNewxchangeShopPassword, 1, {from: carol}),
             "Cannot verify passwords"
         ); 
 
@@ -133,23 +148,24 @@ contract("Remittance Error Test", async accounts => {
 
     it('should revert if exchange shop password is incorrect or empty', async () => {
         const hashedExchangeShopPassword = web3.utils.soliditySha3(PASSWORD_EXCHANGE_SHOP_1);
+        const hashedNewxEchangeShopPassword = web3.utils.soliditySha3(PASSWORD_EXCHANGE_SHOP_2);
         const hashedRecipientPassword = web3.utils.soliditySha3(PASSWORD_RECIPIENT_1);
 
         await instance.registerExchangeShop(carol, hashedExchangeShopPassword, {from: owner});
         await instance.initiateTransfer(ellen, hashedRecipientPassword, {from: dan, value: 2500});
 
         await truffleAssert.reverts(
-            instance.withdrawFunds(PASSWORD_RECIPIENT_1, PASSWORD_EXCHANGE_SHOP_2, 1, {from: carol}),
+            instance.withdrawFunds(PASSWORD_RECIPIENT_1, PASSWORD_EXCHANGE_SHOP_3, hashedNewxEchangeShopPassword, 1, {from: carol}),
             "One or both passwords or transactionID not correct"
         );      
 
         await truffleAssert.reverts(
-            instance.withdrawFunds(PASSWORD_RECIPIENT_1, ' ', 1, {from: carol}),
+            instance.withdrawFunds(PASSWORD_RECIPIENT_1, ' ', hashedNewxEchangeShopPassword, 1, {from: carol}),
             "One or both passwords or transactionID not correct"
         ); 
 
         await truffleAssert.reverts(
-            instance.withdrawFunds(PASSWORD_RECIPIENT_1, '', 1, {from: carol}),
+            instance.withdrawFunds(PASSWORD_RECIPIENT_1, '', hashedNewxEchangeShopPassword, 1, {from: carol}),
             "Cannot verify passwords"
         ); 
 
@@ -158,72 +174,80 @@ contract("Remittance Error Test", async accounts => {
     
     it('should revert if transaciotnID is not provided when withdrawing funds', async () => {
         const hashedExchangeShopPassword = web3.utils.soliditySha3(PASSWORD_EXCHANGE_SHOP_1);
+        const hashedNewxchangeShopPassword = web3.utils.soliditySha3(PASSWORD_EXCHANGE_SHOP_2);
         const hashedRecipientPassword = web3.utils.soliditySha3(PASSWORD_RECIPIENT_1);
 
         await instance.registerExchangeShop(carol, hashedExchangeShopPassword, {from: owner});
         await instance.initiateTransfer(ellen, hashedRecipientPassword, {from: dan, value: 2500});  
 
         await truffleAssert.reverts(
-            instance.withdrawFunds(PASSWORD_RECIPIENT_1, PASSWORD_EXCHANGE_SHOP_1, '', {from: carol}),
+            instance.withdrawFunds(PASSWORD_RECIPIENT_1, PASSWORD_EXCHANGE_SHOP_1, hashedNewxchangeShopPassword, '', {from: carol}),
             "One or both passwords or transactionID not correct"
         ); 
     });
 
     it('should revert if transaciotnID is not correct when withdrawing funds', async () => {
         const hashedExchangeShopPassword = web3.utils.soliditySha3(PASSWORD_EXCHANGE_SHOP_1);
+        const hashedNewxchangeShopPassword = web3.utils.soliditySha3(PASSWORD_EXCHANGE_SHOP_2);
         const hashedRecipientPassword = web3.utils.soliditySha3(PASSWORD_RECIPIENT_1);
 
         await instance.registerExchangeShop(carol, hashedExchangeShopPassword, {from: owner});
         await instance.initiateTransfer(ellen, hashedRecipientPassword, {from: dan, value: 2500});  
 
         await truffleAssert.reverts(
-            instance.withdrawFunds(PASSWORD_RECIPIENT_1, PASSWORD_EXCHANGE_SHOP_1, 0, {from: carol}),
+            instance.withdrawFunds(PASSWORD_RECIPIENT_1, PASSWORD_EXCHANGE_SHOP_1, hashedNewxchangeShopPassword, 0, {from: carol}),
             "One or both passwords or transactionID not correct"
         ); 
     });
 
-    it('should revert when withdrawing funds if exchange shop is not registered', async () => {
-        const hashedExchangeShopPassword = web3.utils.soliditySha3(PASSWORD_EXCHANGE_SHOP_1);
-        const hashedRecipientPassword = web3.utils.soliditySha3(PASSWORD_RECIPIENT_1);
+    it('should revert if exchange shop password has arleady been used when withdrawing funds ', async () => {
+        const hashedExchangeShopPassword1 = web3.utils.soliditySha3(PASSWORD_EXCHANGE_SHOP_1);
+        const hashedNewxchangeShopPassword = web3.utils.soliditySha3(PASSWORD_EXCHANGE_SHOP_3);
+        const hashedExchangeShopPassword2 = web3.utils.soliditySha3(PASSWORD_EXCHANGE_SHOP_2);
+        const hashedRecipientPassword1= web3.utils.soliditySha3(PASSWORD_RECIPIENT_1);
+        const hashedRecipientPassword2 = web3.utils.soliditySha3(PASSWORD_RECIPIENT_2);
 
-        await instance.registerExchangeShop(carol, hashedExchangeShopPassword, {from: owner});
-        await instance.initiateTransfer(ellen, hashedRecipientPassword, {from: dan, value: 2500});  
+        await instance.registerExchangeShop(carol, hashedExchangeShopPassword1, {from: owner});
+        await instance.initiateTransfer(ellen, hashedRecipientPassword1, {from: dan, value: 2500});  
+        await instance.withdrawFunds(PASSWORD_RECIPIENT_1, PASSWORD_EXCHANGE_SHOP_1, hashedNewxchangeShopPassword, 1, {from: carol});
 
+        await instance.initiateTransfer(ellen, hashedRecipientPassword2, {from: dan, value: 2500});  
         await truffleAssert.reverts(
-            instance.withdrawFunds(PASSWORD_RECIPIENT_1, PASSWORD_EXCHANGE_SHOP_1, 0, {from: frank}),
-            "One or both passwords or transactionID not correct"
+            instance.withdrawFunds(PASSWORD_RECIPIENT_2, PASSWORD_EXCHANGE_SHOP_2, hashedNewxchangeShopPassword, 2, {from: carol}),
+            "Exchange shop password has already been used"
         );       
      });
 
-     it('should not allow certain functions to be called if the contract is paused', async () => {
+     it('should not allow certain functions to be called if the contract has been killed', async () => {
         const hashedExchangeShopPassword = web3.utils.soliditySha3(PASSWORD_EXCHANGE_SHOP_1);
-        const hashedRecipientPassword = web3.utils.soliditySha3(PASSWORD_RECIPIENT_1);
-        await instance.pause({ from: owner });
+        const hashedNewxchangeShopPassword = web3.utils.soliditySha3(PASSWORD_EXCHANGE_SHOP_2);
+        const hashedRecipientPassword = web3.utils.soliditySha3(PASSWORD_RECIPIENT_1);   
+        await instance.kill({ from: owner });
       
         await truffleAssert.reverts(
             instance.initiateTransfer(ellen, hashedRecipientPassword, {from: dan, value: 2500}),
-            "Pausable: paused"
+            "Killable: killed"
         );
 
         
         await truffleAssert.reverts(
-            instance.withdrawFunds(PASSWORD_RECIPIENT_1, PASSWORD_EXCHANGE_SHOP_1, 0, {from: frank}),
-            "Pausable: paused"
+            instance.withdrawFunds(PASSWORD_RECIPIENT_1, PASSWORD_EXCHANGE_SHOP_1, hashedNewxchangeShopPassword, 0, {from: frank}),
+            "Killable: killed"
         );  
         
     });
 
-    it('should not allow safeguardFunds function to be called if the contract IS NOT paused', async () => {
+    it('should not allow safeguardFunds function to be called if the contract is alive', async () => {
       
         await truffleAssert.reverts(
             instance.safeguardFunds(safeguard, {from: owner}),
-            "Pausable: not paused"
+            "Killable: alive"
         );
         
     });
 
     it('should only allow owner to call safeguarFunds', async () => {
-        await instance.pause({ from: owner });
+        await instance.kill({ from: owner });
 
         await truffleAssert.reverts(
             instance.safeguardFunds(safeguard, {from: carol}),
@@ -233,7 +257,7 @@ contract("Remittance Error Test", async accounts => {
     });
 
     it('should revert if safeguard transfer cannot be completed' , async () => {
-        await instance.pause({ from: owner });
+        await instance.kill({ from: owner });
 
         await truffleAssert.reverts(
             instance.safeguardFunds(ZERO_ADDRESS, {from: owner}),
