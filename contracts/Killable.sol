@@ -8,8 +8,9 @@ pragma solidity >=0.4.25 <0.6.0;
  */
 
 import '@openzeppelin/contracts/ownership/Ownable.sol';
+import '@openzeppelin/contracts/lifecycle/Pausable.sol';
 
-contract Killable is Ownable {
+contract Killable is Ownable, Pausable {
 
     bool private _killed;
 
@@ -24,7 +25,7 @@ contract Killable is Ownable {
         return _killed;
     }
 
-    function kill() public onlyOwner whenAlive {
+    function kill() public onlyOwner whenAlive whenPaused {
         _killed = true;
         emit Killed(msg.sender);
     }

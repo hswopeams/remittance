@@ -19,7 +19,7 @@ if (typeof window.ethereum !== 'undefined' || typeof window.web3 !== 'undefined'
     window.web3 = new Web3(new Web3.providers.HttpProvider('http://127.0.0.1:8545'));
 }
 
-const newExchangeShopPassword = web3.utils.randomHex(4);
+
 const Remittance = truffleContract(remittanceJson);
 Remittance.setProvider(web3.currentProvider);
 
@@ -37,13 +37,9 @@ window.addEventListener('load', async function() {
 
         const network = await web3.eth.net.getId();
         const instance = await Remittance.deployed();
-        //const newHashedExchangeShopPassword = web3.utils.soliditySha3({t: 'bytes', v: web3.utils.randomHex(4)});
-
-        console.log("newExchangeShopPassword ", newExchangeShopPassword);
  
         $("#balanceContract").html(await web3.eth.getBalance(instance.address));
-        $("#newExchangeShopPassword").html(newExchangeShopPassword);
-
+       
         // We wire it when the system looks in order.
         $("#registerExchangeShop").click(registerExchangeShop);
         $("#initiateTransfer").click(initiateTransfer);
@@ -65,18 +61,11 @@ const registerExchangeShop = async function() {
             web3.eth.getAccounts());
             console.log("accounts ", accounts);
         const instance = await Remittance.deployed();
-   
-        console.log("passwordExchangeShop ", $("input[name='passwordExchangeShop']").val());
-        const hashedPasswordExchangeShop = web3.utils.soliditySha3($("input[name='passwordExchangeShop']").val());
-        console.log("hashedPasswordExchangeShop ", hashedPasswordExchangeShop);
-        console.log("exchangeShopAddress ", $("input[name='exchangeShopAddress']").val());
-
 
         // We simulate the real call and see whether this is likely to work.
         // No point in wasting gas if we have a likely failure.
         const success = await instance.registerExchangeShop.call(
             $("input[name='exchangeShopAddress']").val(),
-            hashedPasswordExchangeShop,
             { from: window.account, gas: gas });
 
         if (!success) {
@@ -86,7 +75,6 @@ const registerExchangeShop = async function() {
         // Ok, we move onto the proper action.
         const txObj = await instance.registerExchangeShop(
             $("input[name='exchangeShopAddress']").val(),
-            hashedPasswordExchangeShop,
             { from: window.account, gas: gas })
             //transfer takes time in real life, so we get the txHash immediately while it 
             // is mined.
@@ -137,13 +125,13 @@ const initiateTransfer = async function() {
             console.log("accounts ", accounts);
         const instance = await Remittance.deployed();
        
-       const hashedPasswordExchangeShop = web3.utils.soliditySha3($("input[name='passwordRecipient']").val());
+       const hashedPasswordRecipient = web3.utils.soliditySha3($("input[name='passwordRecipient']").val());
 
         // We simulate the real call and see whether this is likely to work.
         // No point in wasting gas if we have a likely failure.
         const success = await instance.initiateTransfer.call(
             $("input[name='recipeientAddress']").val(),
-            hashedPasswordExchangeShop,
+            hashedPasswordRecipient,
             { from: $("input[name='senderAddress']").val(), value: $("input[name='amount']").val(), gas: gas });
 
         if (!success) {
@@ -152,7 +140,7 @@ const initiateTransfer = async function() {
         // Ok, we move onto the proper action.
         const txObj = await instance.initiateTransfer(
             $("input[name='recipeientAddress']").val(),
-            hashedPasswordExchangeShop,
+            hashedPasswordRecipient,
             { from: $("input[name='senderAddress']").val(), value: $("input[name='amount']").val(), gas: gas })
             //transfer takes time in real life, so we get the txHash immediately while it 
             // is mined.
@@ -180,7 +168,6 @@ const initiateTransfer = async function() {
         } else {
             console.log("logs ", receipt.logs[0]);
             $("#status").html("Transfer Initiated");
-            $("#displayTransactionId").html("Transaction ID is " +receipt.logs[0].args.transactionID.toString());
         }
 
         // Make sure we update the UI.
@@ -207,15 +194,11 @@ const withdrawFunds = async function() {
         }
 
         const instance = await Remittance.deployed();
-        const hashedNewPasswordExchangeShop = web3.utils.soliditySha3($("input[name='newPasswordExchangeWithdraw']").val());
 
         // We simulate the real call and see whether this is likely to work.
         // No point in wasting gas if we have a likely failure.
         const success = await instance.withdrawFunds.call(
             $("input[name='passwordRecipientWithdraw']").val(),
-            $("input[name='passwordExchangeWithdraw']").val(),
-            hashedNewPasswordExchangeShop,
-            $("input[name='transactionID']").val(),
             { from: $("input[name='exchangeShopAddress']").val(), gas: gas });
         if (!success) {
             throw new Error("The transaction will fail anyway, not sending");
@@ -224,9 +207,6 @@ const withdrawFunds = async function() {
         // Ok, we move onto the proper action.
         const txObj = await instance.withdrawFunds(
             $("input[name='passwordRecipientWithdraw']").val(),
-            $("input[name='passwordExchangeWithdraw']").val(),
-            hashedNewPasswordExchangeShop,
-            $("input[name='transactionID']").val(),
             { from: $("input[name='exchangeShopAddress']").val(), gas: gas })
             // withdrawFunds takes time in real life, so we get the txHash immediately while it 
             // is mined.
