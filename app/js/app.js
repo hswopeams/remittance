@@ -42,7 +42,9 @@ window.addEventListener('load', async function() {
        
         // We wire it when the system looks in order.
         $("#registerExchangeShop").click(registerExchangeShop);
+        $("#deRegisterExchangeShop").click(deRegisterExchangeShop);
         $("#initiateTransfer").click(initiateTransfer);
+        $("#cancelTransfer").click(cancelTransfer);
         $("#withdraw").click(withdrawFunds);
         
     } catch(err) {
@@ -112,6 +114,67 @@ const registerExchangeShop = async function() {
     }
 };
 
+const deRegisterExchangeShop = async function() {
+    // Sometimes you have to force the gas amount to a value you know is enough because
+    // `web3.eth.estimateGas` may get it wrong.
+    const gas = 300000;
+    try {
+        const accounts = await (/*window.ethereum ?
+            window.enable() ||*/
+            web3.eth.getAccounts());
+            console.log("accounts ", accounts);
+        const instance = await Remittance.deployed();
+
+        // We simulate the real call and see whether this is likely to work.
+        // No point in wasting gas if we have a likely failure.
+        const success = await instance.deregisterExchangeShop.call(
+            $("input[name='exchangeShopAddress']").val(),
+            { from: window.account, gas: gas });
+
+        if (!success) {
+            throw new Error("The transaction will fail anyway, not sending");
+        }
+
+        // Ok, we move onto the proper action.
+        const txObj = await instance.deregisterExchangeShop(
+            $("input[name='exchangeShopAddress']").val(),
+            { from: window.account, gas: gas })
+            //transfer takes time in real life, so we get the txHash immediately while it 
+            // is mined.
+            .on(
+                "transactionHash",
+                txHash => $("#status").html("Transaction on the way " + txHash)
+            )
+            .on('receipt', function(receipt){
+                console.log("receipt in on receipt ", receipt);
+                console.log("events in on receipt ", receipt.events);
+
+            });
+        // Now we got the mined tx.
+        const receipt = txObj.receipt;
+
+        if (!receipt.status) {
+            console.error("Wrong status");
+            console.error(receipt);
+            $("#status").html("There was an error in the tx execution, status not 1");
+        } else if (receipt.logs.length == 0) {
+            console.error("Empty logs");
+            console.error(receipt);
+            $("#status").html("There was an error in the tx execution, missing expected event");
+        } else {
+            console.log("logs ", receipt.logs[0]);
+            $("#status").html("Exchange Shop Deregistered");
+        }
+        
+        // Make sure we update the UI.
+        $("#balanceContract").html(await web3.eth.getBalance(instance.address));
+
+    } catch(err) {
+        $("#status").html(err.toString());
+        console.error(err);
+    }
+};
+
 
 
 const initiateTransfer = async function() {
@@ -125,13 +188,17 @@ const initiateTransfer = async function() {
             console.log("accounts ", accounts);
         const instance = await Remittance.deployed();
        
-       const hashedPasswordRecipient = web3.utils.soliditySha3($("input[name='passwordRecipient']").val());
+        const hashedPasswordRecipient = await instance.generateHash($("input[name='passwordRecipient']").val());
+     
+
+        let expiration = new Date($("input[name='expiration']").val());
+        expiration = Math.floor(expiration.getTime()/1000);
 
         // We simulate the real call and see whether this is likely to work.
         // No point in wasting gas if we have a likely failure.
         const success = await instance.initiateTransfer.call(
-            $("input[name='recipeientAddress']").val(),
             hashedPasswordRecipient,
+            expiration,
             { from: $("input[name='senderAddress']").val(), value: $("input[name='amount']").val(), gas: gas });
 
         if (!success) {
@@ -139,8 +206,8 @@ const initiateTransfer = async function() {
         }
         // Ok, we move onto the proper action.
         const txObj = await instance.initiateTransfer(
-            $("input[name='recipeientAddress']").val(),
             hashedPasswordRecipient,
+            expiration,
             { from: $("input[name='senderAddress']").val(), value: $("input[name='amount']").val(), gas: gas })
             //transfer takes time in real life, so we get the txHash immediately while it 
             // is mined.
@@ -168,6 +235,69 @@ const initiateTransfer = async function() {
         } else {
             console.log("logs ", receipt.logs[0]);
             $("#status").html("Transfer Initiated");
+        }
+
+        // Make sure we update the UI.
+        $("#balanceContract").html(await web3.eth.getBalance(instance.address));
+
+    } catch(err) {
+        $("#status").html(err.toString());
+        console.error(err);
+    }
+};
+
+const cancelTransfer = async function() {
+    // Sometimes you have to force the gas amount to a value you know is enough because
+    // `web3.eth.estimateGas` may get it wrong.
+    const gas = 300000;
+    try {
+        const accounts = await (/*window.ethereum ?
+            window.enable() ||*/
+            web3.eth.getAccounts());
+            console.log("accounts ", accounts);
+        const instance = await Remittance.deployed();
+       
+        const hashedPasswordRecipient = await instance.generateHash($("input[name='passwordRecipient']").val());
+     
+        // We simulate the real call and see whether this is likely to work.
+        // No point in wasting gas if we have a likely failure.
+        const success = await instance.cancelTransfer.call(
+            hashedPasswordRecipient,
+            { from: $("input[name='senderAddress']").val(), gas: gas });
+
+        if (!success) {
+            throw new Error("The transaction will fail anyway, not sending");
+        }
+        // Ok, we move onto the proper action.
+        const txObj = await instance.cancelTransfer(
+            hashedPasswordRecipient,
+            { from: $("input[name='senderAddress']").val(), gas: gas })
+            //transfer takes time in real life, so we get the txHash immediately while it 
+            // is mined.
+            .on(
+                "transactionHash",
+                txHash => $("#status").html("Transaction on the way " + txHash)
+            )
+            .on('receipt', function(receipt){
+                console.log("receipt in on receipt ", receipt);
+                console.log("events in on receipt ", receipt.events);
+
+            });
+
+        // Now we got the mined tx.
+        const receipt = txObj.receipt;
+
+        if (!receipt.status) {
+            console.error("Wrong status");
+            console.error(receipt);
+            $("#status").html("There was an error in the tx execution, status not 1");
+        } else if (receipt.logs.length == 0) {
+            console.error("Empty logs");
+            console.error(receipt);
+            $("#status").html("There was an error in the tx execution, missing expected event");
+        } else {
+            console.log("logs ", receipt.logs[0]);
+            $("#status").html("Transfer Cancelled");
         }
 
         // Make sure we update the UI.

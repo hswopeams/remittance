@@ -123,7 +123,7 @@ contract("Remittance Error Test", async accounts => {
     });
 
     it('should revert if recipient password has already been used when initiating transfer', async () => {
-        const hashedPassword = web3.utils.soliditySha3(PASSWORD_RECIPIENT_1);
+        const hashedPassword = await instance.generateHash(PASSWORD_RECIPIENT_1);
 
         await instance.initiateTransfer(hashedPassword, expiration, {from: alice, value: 2500});
 
@@ -135,7 +135,7 @@ contract("Remittance Error Test", async accounts => {
 
 
     it('should revert if recipient password is incorrect or empty', async () => {
-        const hashedRecipientPassword = web3.utils.soliditySha3(PASSWORD_RECIPIENT_1);
+        const hashedRecipientPassword = await instance.generateHash(PASSWORD_RECIPIENT_1);
 
         await instance.registerExchangeShop(carol, {from: owner});
         await instance.initiateTransfer(hashedRecipientPassword,expiration, {from: dan, value: 2500});
@@ -147,18 +147,18 @@ contract("Remittance Error Test", async accounts => {
         
         await truffleAssert.reverts(
             instance.withdrawFunds(' ', {from: carol}),
-            "Recipient password not valid"
+            "Password cannot be empty"
         ); 
 
         await truffleAssert.reverts(
             instance.withdrawFunds('', {from: carol}),
-            "Recipient password not valid"
+            "Password cannot be empty"
         ); 
         
     });
 
     it('should revert if the expiration is not in the future when initiating transfer', async () => {
-        const hashedPassword = web3.utils.soliditySha3(PASSWORD_RECIPIENT_1);
+        const hashedPassword = await instance.generateHash(PASSWORD_RECIPIENT_1);
 
         originalBlock = await web3.eth.getBlock('latest');
         let tenSecondsEarlier = new Date(originalBlock.timestamp * 1000);
@@ -177,7 +177,7 @@ contract("Remittance Error Test", async accounts => {
     });
 
     it('should revert if transaction has not yet expirted when transaction is cancelled', async () => {
-        const hashedPassword = web3.utils.soliditySha3(PASSWORD_RECIPIENT_1);
+        const hashedPassword = await instance.generateHash(PASSWORD_RECIPIENT_1);
 
         await instance.initiateTransfer(hashedPassword, expiration, {from: alice, value: 2500});
      
@@ -188,8 +188,8 @@ contract("Remittance Error Test", async accounts => {
     });
 
     it('should revert if recipeient password is incorrect when transaction is cancelled', async () => {
-        const hashedPassword = web3.utils.soliditySha3(PASSWORD_RECIPIENT_1);
-        const hashedPassword2 = web3.utils.soliditySha3(PASSWORD_RECIPIENT_2);
+        const hashedPassword = await instance.generateHash(PASSWORD_RECIPIENT_1);
+        const hashedPassword2 = await instance.generateHash(PASSWORD_RECIPIENT_2);
 
         await instance.initiateTransfer(hashedPassword, expiration, {from: alice, value: 2500});
 
@@ -204,7 +204,7 @@ contract("Remittance Error Test", async accounts => {
 
    
     it('should only allow the party who initiated the transfer to cancel the transaction', async () => {
-        const hashedPassword = web3.utils.soliditySha3(PASSWORD_RECIPIENT_1);
+        const hashedPassword = await instance.generateHash(PASSWORD_RECIPIENT_1);
 
         await instance.initiateTransfer(hashedPassword, expiration, {from: alice, value: 2500});
 
@@ -227,7 +227,7 @@ contract("Remittance Error Test", async accounts => {
     });
 
     it('should not allow certain functions to be called if the contract has been killed', async () => {
-        const hashedRecipientPassword = web3.utils.soliditySha3(PASSWORD_RECIPIENT_1);   
+        const hashedRecipientPassword = await instance.generateHash(PASSWORD_RECIPIENT_1); 
         await instance.pause();
         await instance.kill({ from: owner });
       
@@ -274,6 +274,21 @@ contract("Remittance Error Test", async accounts => {
         );
         
     });
+
+    it('should revert if the password to be hashed is empty' , async () => {
+
+        await truffleAssert.reverts(
+            instance.generateHash(""),
+            "Password cannot be empty"
+        );
+
+        await truffleAssert.reverts(
+            instance.generateHash("  "),
+            "Password cannot be empty"
+        );
+       
+    });
+  
    
 });//end test contract
 

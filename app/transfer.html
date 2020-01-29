@@ -80,11 +80,13 @@
             href="https://www.random.org/passwords/?num=2&len=8&format=html&rnd=new">Generate One-time Recipeient Password</a>
     </div>
     <div class="spaced">
-        Transfer <input name="amount" type="number" placeholder="0" /> Wei to <input name="recipeientAddress" type="text" placeholder="0x0000000000000000000000000000000000000000" /> 
+        Transfer <input name="amount" type="number" placeholder="0" /> Wei
         From <input name="senderAddress" type="text" placeholder="0x0000000000000000000000000000000000000000" /> 
+        Expiration <input id="expiration" type="datetime-local" name="expiration" min="2020-01-01T00">
         Recipient Password <input name="passwordRecipient" type="password" />
         &nbsp;
         <button id="initiateTransfer" class="button">Initiate Transfer</button>
+        <button id="cancelTransfer" class="button">Cancel Transfer</button>
     </div>
     <div class="display spaced">The Remittance Contract's has <span id="balanceContract">Loading...</span> Wei</div>
     <div id="status" class="display spaced"></div>

@@ -36,7 +36,6 @@ contract Remittance is Killable {
     event LogFundsTransferred(address indexed exchangeShop, uint256 amount);
     event LogExchangeShopRegistered(address indexed exchangeShop);
     event LogExchangeShopDeregistered(address indexed exchangeShop);
-    event LogDebug(uint256 expiration, uint256 currentTimestamp, bool isExpired);
     
 
     constructor() public {
@@ -63,7 +62,6 @@ contract Remittance is Killable {
     }
 
     function initiateTransfer(bytes32 recipientPassword, uint256 expiration) public payable whenAlive {
-        //emit LogDebug(expiration, now, expiration > now);
         require(expiration > now, "Expiration time must be in the future");
         require(recipientPassword != nullPassword, "Recipient password is invalid");
         require(transactions[recipientPassword].sender == address(0), "Recipient password has already been used");
@@ -92,7 +90,7 @@ contract Remittance is Killable {
     function withdrawFunds(string memory recipientPassword) public whenAlive {
         require(exchangeShops[msg.sender] == true, "Exchange shop is not a registered exchange shop");
 
-        bytes32 hashedReecipientPassword = keccak256(abi.encodePacked(recipientPassword));
+        bytes32 hashedReecipientPassword = generateHash(recipientPassword);
 
         require(transactions[hashedReecipientPassword].sender != address(0), "Recipient password not valid");
 
@@ -115,8 +113,13 @@ contract Remittance is Killable {
    
     }
 
-    function isExpired(Transaction memory transaction) private view returns (bool){
-        //emit LogDebug(transaction.expiration, now, now > transaction.expiration);
+    function generateHash(string memory plainPassword) public view returns (bytes32) {
+        bytes memory byteString = bytes(plainPassword);
+        require(byteString.length > 0 && byteString[0] != " ", "Password cannot be empty");
+        return keccak256(abi.encodePacked(address(this), plainPassword));
+    }
+
+    function isExpired(Transaction memory transaction) private view returns (bool) {
         return now > transaction.expiration;
     }
 }
