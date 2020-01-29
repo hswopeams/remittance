@@ -231,7 +231,7 @@ contract("Remittance Happy Flow Test", async accounts => {
     it('should allow owner kill the contract', async () => {
         await instance.pause();
         const txObj = await instance.kill({ from: owner });
-        let killed = await instance.killed({ from: owner });
+        let killed = await instance.isKilled({ from: owner });
         assert.isTrue(killed, 'the contract has not been killed');
 
         truffleAssert.eventEmitted(txObj.receipt, 'Killed', (ev) => {
@@ -255,7 +255,7 @@ contract("Remittance Happy Flow Test", async accounts => {
 
         await instance.pause();
         await instance.kill({ from: owner });
-        let killed = await instance.killed({ from: owner });
+        let killed = await instance.isKilled({ from: owner });
         assert.isTrue(killed, 'the contract has not been killed');
 
         const txObj =  await instance.safeguardFunds(safeguard);

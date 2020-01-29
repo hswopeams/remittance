@@ -21,7 +21,7 @@ contract Killable is Ownable, Pausable {
         _killed = false;
     }
 
-    function killed() public view returns (bool) {
+    function isKilled() public view returns (bool) {
         return _killed;
     }
 

@@ -5,12 +5,13 @@ pragma solidity >=0.4.25 <0.6.0;
  * @title Remittance
  * @dev Contract which provides a way for Person A to send funds to Person B via any registered exchange shop (for example a Western Union franchise).
  * The owner of the contract must first register the exchange shop as a participating exchange shop.
+ * The owner can allso deregister an exchange shop.
  * Person A sends Ether, the exchange shop proprietor exchanges the Ether for a local currency and gives the currency to Person B.
- * Person A initiats the transfer, indicating for whom the funds are intended and assigns the password the recipeient will have to use in order to receive the funds.
+ * Person A initiats the transfer, indicating for whom the funds are intended, assigns the password the recipeient will have to use in order to receive the funds, and specifies an expiration.
  * Person B goes to a registered exchange shop. The exchange shop proprietor withdraws funds. Person B (the recipient) must provide his/her password.
  * The exchange shop proprietor gives Person B cash in local currency, but that happens outside the scope of the Dapp.
  * Any party can remit funds to any other party using any registered eschange shop in this way.
- * Passwords are hashed offline and only stored by the contract.
+ * Passwords are hashed using the generateHash function.
  * If the contract is "killed", the transactions can be retrieved to keep track of which transactions have not yet been carried out
  */
 
@@ -88,7 +89,7 @@ contract Remittance is Killable {
     }
 
     function withdrawFunds(string memory recipientPassword) public whenAlive {
-        require(exchangeShops[msg.sender] == true, "Exchange shop is not a registered exchange shop");
+        require(exchangeShops[msg.sender], "Exchange shop is not a registered exchange shop");
 
         bytes32 hashedReecipientPassword = generateHash(recipientPassword);
 
