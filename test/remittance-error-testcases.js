@@ -6,12 +6,17 @@ chai.use(bnChai(BN));
 const assert = chai.assert;
 const expect = chai.expect;
 const truffleAssert = require('truffle-assertions');
+const helper = require("./helpers/truffleTestHelper");
 
 contract("Remittance Error Test", async accounts => {
     let instance;
     let alice,bob,carol;
     let passwordBob;
     let passwordCarol;
+    let originalBlock;
+    let expiration;
+    let SECONDS_IN_DAY;
+    
   
   
     // Runs before all tests in this block.
@@ -27,11 +32,18 @@ contract("Remittance Error Test", async accounts => {
         //Generated using random.org
         PASSWORD_RECIPIENT_1 = "w5S2hsdN";
         PASSWORD_RECIPIENT_2 = "RKH33Trj";
+
+        SECONDS_IN_DAY = 86400;
     });
 
      //Run before each test case
      beforeEach("deploying new instance", async () => {
         instance = await Remittance.new();
+
+        originalBlock = await web3.eth.getBlock('latest');
+        let twentyMinutesLater = new Date(originalBlock.timestamp * 1000);
+        twentyMinutesLater.setMinutes(twentyMinutesLater.getMinutes() + 20);
+        expiration = Math.floor(twentyMinutesLater.getTime()/1000);
     });
 
     it('should revert when the fallback function is called', async () => {
@@ -68,24 +80,42 @@ contract("Remittance Error Test", async accounts => {
     
     it('should revert if no ether is sent when initiating transfer', async () => {
         const hashedPassword = web3.utils.soliditySha3(PASSWORD_RECIPIENT_1);
+
         await truffleAssert.reverts(
-            instance.initiateTransfer(bob, hashedPassword, {from: alice}),
+            instance.initiateTransfer(hashedPassword, expiration, {from: alice}),
             "No Ether sent"
         );        
     });
+  
 
-    it('should revert if recipient is zero address when initiating transfer', async () => {
-        const hashedPassword = web3.utils.soliditySha3(PASSWORD_RECIPIENT_1);
+    it('should only allow owner to deregister an exchange shop', async () => {
         await truffleAssert.reverts(
-            instance.initiateTransfer(ZERO_ADDRESS, hashedPassword, {from: alice, value: 2500}),
-            "Recipient is the zero address"
+            instance.deregisterExchangeShop(carol, {from: frank}),
+            "Ownable: caller is not the owner"
         );        
     });
 
+    it('should only allow a registered exchange shop to be deregistered', async () => {
+        await truffleAssert.reverts(
+            instance.deregisterExchangeShop(carol, {from: owner}),
+            "Exchange shop not registered"
+        );        
+    });
+
+    it('should revert if exchange shop is zero address when deregistering', async () => {
+        await truffleAssert.reverts(
+            instance.deregisterExchangeShop(ZERO_ADDRESS, {from: owner}),
+            "Exchange shop is the zero address"
+        );        
+    });
+
+   
+
     it('should revert if password is invlaid when initiating transfer', async () => {
+        
         INVALID_PASSWORDS.forEach( async item => {
             await truffleAssert.reverts(
-                instance.initiateTransfer(bob, item, {from: alice, value: 2500}),
+                instance.initiateTransfer(item, expiration, {from: alice, value: 2500}),
                 "Recipient password is invalid"
             );   
         });
@@ -95,10 +125,10 @@ contract("Remittance Error Test", async accounts => {
     it('should revert if recipient password has already been used when initiating transfer', async () => {
         const hashedPassword = web3.utils.soliditySha3(PASSWORD_RECIPIENT_1);
 
-        await instance.initiateTransfer(bob, hashedPassword, {from: alice, value: 2500});
+        await instance.initiateTransfer(hashedPassword, expiration, {from: alice, value: 2500});
 
         await truffleAssert.reverts(
-            instance.initiateTransfer(bob, hashedPassword, {from: alice, value: 2500}),
+            instance.initiateTransfer(hashedPassword, expiration, {from: alice, value: 2500}),
             "Recipient password has already been used"
         );        
     });
@@ -108,7 +138,7 @@ contract("Remittance Error Test", async accounts => {
         const hashedRecipientPassword = web3.utils.soliditySha3(PASSWORD_RECIPIENT_1);
 
         await instance.registerExchangeShop(carol, {from: owner});
-        await instance.initiateTransfer(ellen, hashedRecipientPassword, {from: dan, value: 2500});
+        await instance.initiateTransfer(hashedRecipientPassword,expiration, {from: dan, value: 2500});
 
         await truffleAssert.reverts(
             instance.withdrawFunds(PASSWORD_RECIPIENT_2, {from: carol}),
@@ -127,6 +157,66 @@ contract("Remittance Error Test", async accounts => {
         
     });
 
+    it('should revert if the expiration is not in the future when initiating transfer', async () => {
+        const hashedPassword = web3.utils.soliditySha3(PASSWORD_RECIPIENT_1);
+
+        originalBlock = await web3.eth.getBlock('latest');
+        let tenSecondsEarlier = new Date(originalBlock.timestamp * 1000);
+        tenSecondsEarlier.setSeconds(tenSecondsEarlier.getSeconds() - 10);
+        expiration = Math.floor(tenSecondsEarlier.getTime()/1000);
+
+        await truffleAssert.reverts(
+            instance.initiateTransfer(hashedPassword, originalBlock.timestamp, {from: alice, value: 2500}),
+            "Expiration time must be in the future"
+        );        
+
+        await truffleAssert.reverts(
+            instance.initiateTransfer(hashedPassword, expiration, {from: alice, value: 2500}),
+            "Expiration time must be in the future"
+        ); 
+    });
+
+    it('should revert if transaction has not yet expirted when transaction is cancelled', async () => {
+        const hashedPassword = web3.utils.soliditySha3(PASSWORD_RECIPIENT_1);
+
+        await instance.initiateTransfer(hashedPassword, expiration, {from: alice, value: 2500});
+     
+        await truffleAssert.reverts(
+            instance.cancelTransfer(hashedPassword, {from: alice}),
+            "Transaction has not yet expired"
+        ); 
+    });
+
+    it('should revert if recipeient password is incorrect when transaction is cancelled', async () => {
+        const hashedPassword = web3.utils.soliditySha3(PASSWORD_RECIPIENT_1);
+        const hashedPassword2 = web3.utils.soliditySha3(PASSWORD_RECIPIENT_2);
+
+        await instance.initiateTransfer(hashedPassword, expiration, {from: alice, value: 2500});
+
+        const advancement = SECONDS_IN_DAY;
+        await helper.advanceTimeAndBlock(advancement);
+     
+        await truffleAssert.reverts(
+            instance.cancelTransfer(hashedPassword2, {from: alice}),
+            "Caller did not initate the transfer or password invalid"
+        ); 
+    });
+
+   
+    it('should only allow the party who initiated the transfer to cancel the transaction', async () => {
+        const hashedPassword = web3.utils.soliditySha3(PASSWORD_RECIPIENT_1);
+
+        await instance.initiateTransfer(hashedPassword, expiration, {from: alice, value: 2500});
+
+        const advancement = SECONDS_IN_DAY;
+        await helper.advanceTimeAndBlock(advancement);
+     
+        await truffleAssert.reverts(
+            instance.cancelTransfer(hashedPassword, {from: bob}),
+            "Caller did not initate the transfer or password invalid"
+        ); 
+    })
+
     it('should revert if kill is called before pausing the contract', async () => {
         await truffleAssert.reverts(
             instance.kill({ from: owner }),
@@ -142,7 +232,7 @@ contract("Remittance Error Test", async accounts => {
         await instance.kill({ from: owner });
       
         await truffleAssert.reverts(
-            instance.initiateTransfer(ellen, hashedRecipientPassword, {from: dan, value: 2500}),
+            instance.initiateTransfer(hashedRecipientPassword, expiration, {from: dan, value: 2500}),
             "Killable: killed"
         );
 
@@ -163,7 +253,7 @@ contract("Remittance Error Test", async accounts => {
         
     });
 
-    it('should only allow owner to call safeguarFunds', async () => {
+    it('should only allow owner to call safeguardFunds', async () => {
         await instance.pause();
         await instance.kill({ from: owner });
 
@@ -184,5 +274,6 @@ contract("Remittance Error Test", async accounts => {
         );
         
     });
+   
 });//end test contract
 

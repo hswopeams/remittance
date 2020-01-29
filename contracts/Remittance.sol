@@ -2,7 +2,7 @@ pragma solidity >=0.4.25 <0.6.0;
 
 /**
  * @author Heather Swope
- * @title Killable
+ * @title Remittance
  * @dev Contract which provides a way for Person A to send funds to Person B via any registered exchange shop (for example a Western Union franchise).
  * The owner of the contract must first register the exchange shop as a participating exchange shop.
  * Person A sends Ether, the exchange shop proprietor exchanges the Ether for a local currency and gives the currency to Person B.
@@ -14,7 +14,7 @@ pragma solidity >=0.4.25 <0.6.0;
  * If the contract is "killed", the transactions can be retrieved to keep track of which transactions have not yet been carried out
  */
 
-import '@openzeppelin/contracts/ownership/Ownable.sol';
+import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./Killable.sol";
 
@@ -27,13 +27,17 @@ contract Remittance is Killable {
 
     struct Transaction {
         address payable sender;
-        address payable recipient;
         uint256 amount;
+        uint256 expiration;
     }
     
-    event LogTransferInitiated(address indexed sender, address indexed recipient, uint256 amount);
+    event LogTransferInitiated(address indexed sender, uint256 amount, uint256 expiration);
+    event LogTransferCancelled(address indexed sender, uint256 amount, uint256 expiration);
     event LogFundsTransferred(address indexed exchangeShop, uint256 amount);
     event LogExchangeShopRegistered(address indexed exchangeShop);
+    event LogExchangeShopDeregistered(address indexed exchangeShop);
+    event LogDebug(uint256 expiration, uint256 currentTimestamp, bool isExpired);
+    
 
     constructor() public {
     }
@@ -44,43 +48,75 @@ contract Remittance is Killable {
 
     function registerExchangeShop(address exchangeShop) public onlyOwner returns (bool) {
         require(exchangeShop != address(0), "Exchange shop is the zero address");
-        require(exchangeShops[exchangeShop] != true, "Exchange shop already registered");
+        require(!exchangeShops[exchangeShop], "Exchange shop already registered");
         exchangeShops[exchangeShop] = true;
         emit LogExchangeShopRegistered(exchangeShop);
         return true;
     }
 
-    function initiateTransfer(address payable recipient, bytes32 recipientPassword) public payable whenAlive {
-        require(recipient != address(0), "Recipient is the zero address");
+    function deregisterExchangeShop(address exchangeShop) public onlyOwner returns (bool) {
+        require(exchangeShop != address(0), "Exchange shop is the zero address");
+        require(exchangeShops[exchangeShop], "Exchange shop not registered");
+        exchangeShops[exchangeShop] = false;
+        emit LogExchangeShopDeregistered(exchangeShop);
+        return true;
+    }
+
+    function initiateTransfer(bytes32 recipientPassword, uint256 expiration) public payable whenAlive {
+        //emit LogDebug(expiration, now, expiration > now);
+        require(expiration > now, "Expiration time must be in the future");
         require(recipientPassword != nullPassword, "Recipient password is invalid");
         require(transactions[recipientPassword].sender == address(0), "Recipient password has already been used");
         require(msg.value > 0, "No Ether sent");
-        transactions[recipientPassword] = Transaction(msg.sender, recipient, msg.value);
-        emit LogTransferInitiated(msg.sender, recipient, msg.value);
+        transactions[recipientPassword] = Transaction(msg.sender, msg.value, expiration);
+        emit LogTransferInitiated(msg.sender, msg.value, transactions[recipientPassword].expiration);
+    }
+
+    function cancelTransfer(bytes32 recipientPassword) public payable whenAlive {
+        require(transactions[recipientPassword].sender == msg.sender, "Caller did not initate the transfer or password invalid");
+        Transaction storage transaction = transactions[recipientPassword];
+        require(isExpired(transaction), "Transaction has not yet expired");
+
+        emit LogTransferCancelled(msg.sender, transaction.amount, transaction.expiration);
+
+        /**
+         * Functional delete of transaction values except sender.
+         * The transaction.sender is used in initiateTransfer to check if a password has been used before
+         */
+        transactions[recipientPassword].amount = 0;
+
+        (bool success, ) = msg.sender.call.value(transaction.amount)("");
+        require(success, "Transfer failed.");
     }
 
     function withdrawFunds(string memory recipientPassword) public whenAlive {
-            require(exchangeShops[msg.sender] == true, "Exchange shop is not a registered exchange shop");
+        require(exchangeShops[msg.sender] == true, "Exchange shop is not a registered exchange shop");
 
-            bytes32 hashedReecipientPassword = keccak256(abi.encodePacked(recipientPassword));
+        bytes32 hashedReecipientPassword = keccak256(abi.encodePacked(recipientPassword));
 
-            require(transactions[hashedReecipientPassword].sender != address(0), "Recipient password not valid");
+        require(transactions[hashedReecipientPassword].sender != address(0), "Recipient password not valid");
 
-            Transaction storage transaction = transactions[hashedReecipientPassword];
-            uint256 amount = transaction.amount;
-            
-            require(amount > 0, "Remittance funds not available");
-            
-            emit LogFundsTransferred(msg.sender, amount);
+        Transaction storage transaction = transactions[hashedReecipientPassword];
+        uint256 amount = transaction.amount;
+        
+        require(amount > 0, "Remittance funds not available");
+        require(!isExpired(transaction), "Transaction has expired");
+        
+        emit LogFundsTransferred(msg.sender, amount);
+ 
+        /**
+         * Functional delete of transaction values except sender.
+         * The transaction.sender is used in initiateTransfer to check if a password has been used before
+         */
+        transactions[hashedReecipientPassword].amount = 0;
 
-            /* Functional delete of all values  transaction values except sender.
-             * The transaction.sender is used in initiateTransfer to check if a password has been used before
-             */
-            transactions[hashedReecipientPassword].recipient = address(0);
-            transactions[hashedReecipientPassword].amount = 0;
-
-            (bool success, ) = msg.sender.call.value(amount)("");
-            require(success, "Transfer failed.");
+        (bool success, ) = msg.sender.call.value(amount)("");
+        require(success, "Transfer failed.");
    
+    }
+
+    function isExpired(Transaction memory transaction) private view returns (bool){
+        //emit LogDebug(transaction.expiration, now, now > transaction.expiration);
+        return now > transaction.expiration;
     }
 }
