@@ -13,6 +13,9 @@ contract("Remittance Happy Flow Test", async accounts => {
     let owner,alice,bob,carol,dan,ellen,frank, safeguard;
     let expiration;
     let SECONDS_IN_DAY;
+    let ZERO_ADDRESS;
+    let PASSWORD_RECIPIENT_1;
+    let PASSWORD_RECIPIENT_2;
   
   
     // Runs before all tests in this block.

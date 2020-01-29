@@ -16,6 +16,10 @@ contract("Remittance Error Test", async accounts => {
     let originalBlock;
     let expiration;
     let SECONDS_IN_DAY;
+    let ZERO_ADDRESS;
+    let PASSWORD_RECIPIENT_1;
+    let PASSWORD_RECIPIENT_2;
+    let INVALID_PASSWORDS;
     
   
   
@@ -101,15 +105,6 @@ contract("Remittance Error Test", async accounts => {
             "Exchange shop not registered"
         );        
     });
-
-    it('should revert if exchange shop is zero address when deregistering', async () => {
-        await truffleAssert.reverts(
-            instance.deregisterExchangeShop(ZERO_ADDRESS, {from: owner}),
-            "Exchange shop is the zero address"
-        );        
-    });
-
-   
 
     it('should revert if password is invlaid when initiating transfer', async () => {
         
@@ -198,10 +193,25 @@ contract("Remittance Error Test", async accounts => {
      
         await truffleAssert.reverts(
             instance.cancelTransfer(hashedPassword2, {from: alice}),
-            "Caller did not initate the transfer or password invalid"
+            "Transaction is invalid or has already been cancelled"
         ); 
     });
 
+    it('should revert if transaction has already been cancelled', async () => {
+        const hashedPassword = await instance.generateHash(PASSWORD_RECIPIENT_1);
+
+        await instance.initiateTransfer(hashedPassword, expiration, {from: alice, value: 2500});
+
+        const advancement = SECONDS_IN_DAY;
+        await helper.advanceTimeAndBlock(advancement);
+
+        await instance.cancelTransfer(hashedPassword, {from: alice});
+     
+        await truffleAssert.reverts(
+            instance.cancelTransfer(hashedPassword, {from: alice}),
+            "Transaction is invalid or has already been cancelled"
+        ); 
+    });
    
     it('should only allow the party who initiated the transfer to cancel the transaction', async () => {
         const hashedPassword = await instance.generateHash(PASSWORD_RECIPIENT_1);

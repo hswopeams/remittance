@@ -18,7 +18,6 @@ contract Killable is Ownable, Pausable {
     event LogFundsSafeguarded(address indexed recipient, uint256 amount);
 
     constructor() public {
-        _killed = false;
     }
 
     function isKilled() public view returns (bool) {

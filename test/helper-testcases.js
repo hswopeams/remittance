@@ -10,9 +10,9 @@ describe("Testing Helper Functions", () => {
     
     it("should advance the blockchain forward a block", async () =>{
         const originalBlock = await web3.eth.getBlock('latest');
-        let newBlock = await web3.eth.getBlock('latest');
+        const newBlock = await web3.eth.getBlock('latest');
 
-        newBlockHash = await helper.advanceBlock();
+        const newBlockHash = await helper.advanceBlock();
 
         assert.notEqual(originalBlock.hash, newBlockHash);
         assert.notEqual(newBlock.hash, newBlockHash);

@@ -55,26 +55,26 @@ contract Remittance is Killable {
     }
 
     function deregisterExchangeShop(address exchangeShop) public onlyOwner returns (bool) {
-        require(exchangeShop != address(0), "Exchange shop is the zero address");
         require(exchangeShops[exchangeShop], "Exchange shop not registered");
         exchangeShops[exchangeShop] = false;
         emit LogExchangeShopDeregistered(exchangeShop);
         return true;
     }
 
-    function initiateTransfer(bytes32 recipientPassword, uint256 expiration) public payable whenAlive {
+    function initiateTransfer(bytes32 hashedRecipientPassword, uint256 expiration) public payable whenAlive {
         require(expiration > now, "Expiration time must be in the future");
-        require(recipientPassword != nullPassword, "Recipient password is invalid");
-        require(transactions[recipientPassword].sender == address(0), "Recipient password has already been used");
+        require(hashedRecipientPassword != nullPassword, "Recipient password is invalid");
+        require(transactions[hashedRecipientPassword].sender == address(0), "Recipient password has already been used");
         require(msg.value > 0, "No Ether sent");
-        transactions[recipientPassword] = Transaction(msg.sender, msg.value, expiration);
-        emit LogTransferInitiated(msg.sender, msg.value, transactions[recipientPassword].expiration);
+        transactions[hashedRecipientPassword] = Transaction(msg.sender, msg.value, expiration);
+        emit LogTransferInitiated(msg.sender, msg.value, transactions[hashedRecipientPassword].expiration);
     }
 
-    function cancelTransfer(bytes32 recipientPassword) public payable whenAlive {
-        require(transactions[recipientPassword].sender == msg.sender, "Caller did not initate the transfer or password invalid");
-        Transaction storage transaction = transactions[recipientPassword];
-        require(isExpired(transaction), "Transaction has not yet expired");
+    function cancelTransfer(bytes32 hashedRecipientPassword) public payable whenAlive {
+        require(transactions[hashedRecipientPassword].amount != 0, "Transaction is invalid or has already been cancelled");
+        require(transactions[hashedRecipientPassword].sender == msg.sender, "Caller did not initate the transfer or password invalid");
+        Transaction storage transaction = transactions[hashedRecipientPassword];
+        require(now > transaction.expiration, "Transaction has not yet expired");
 
         emit LogTransferCancelled(msg.sender, transaction.amount, transaction.expiration);
 
@@ -82,16 +82,13 @@ contract Remittance is Killable {
          * Functional delete of transaction values except sender.
          * The transaction.sender is used in initiateTransfer to check if a password has been used before
          */
-        transactions[recipientPassword].amount = 0;
-
-        (bool success, ) = msg.sender.call.value(transaction.amount)("");
-        require(success, "Transfer failed.");
+        transactions[hashedRecipientPassword].amount = 0;
     }
 
-    function withdrawFunds(string memory recipientPassword) public whenAlive {
+    function withdrawFunds(string memory plainRecipientPassword) public whenAlive {
         require(exchangeShops[msg.sender], "Exchange shop is not a registered exchange shop");
 
-        bytes32 hashedReecipientPassword = generateHash(recipientPassword);
+        bytes32 hashedReecipientPassword = generateHash(plainRecipientPassword);
 
         require(transactions[hashedReecipientPassword].sender != address(0), "Recipient password not valid");
 
@@ -99,7 +96,7 @@ contract Remittance is Killable {
         uint256 amount = transaction.amount;
         
         require(amount > 0, "Remittance funds not available");
-        require(!isExpired(transaction), "Transaction has expired");
+        require(now < transaction.expiration, "Transaction has expired");
         
         emit LogFundsTransferred(msg.sender, amount);
  
@@ -120,7 +117,4 @@ contract Remittance is Killable {
         return keccak256(abi.encodePacked(address(this), plainPassword));
     }
 
-    function isExpired(Transaction memory transaction) private view returns (bool) {
-        return now > transaction.expiration;
-    }
 }
