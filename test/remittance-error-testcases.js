@@ -83,7 +83,7 @@ contract("Remittance Error Test", async accounts => {
     });
     
     it('should revert if no ether is sent when initiating transfer', async () => {
-        const hashedPassword = web3.utils.soliditySha3(PASSWORD_RECIPIENT_1);
+       const hashedPassword = await instance.generateHash(PASSWORD_RECIPIENT_1);
 
         await truffleAssert.reverts(
             instance.initiateTransfer(hashedPassword, expiration, {from: alice}),

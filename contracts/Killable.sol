@@ -14,7 +14,7 @@ contract Killable is Ownable, Pausable {
 
     bool private _killed;
 
-    event Killed(address account);
+    event LogKilled(address account);
     event LogFundsSafeguarded(address indexed recipient, uint256 amount);
 
     constructor() public {
@@ -26,7 +26,7 @@ contract Killable is Ownable, Pausable {
 
     function kill() public onlyOwner whenAlive whenPaused {
         _killed = true;
-        emit Killed(msg.sender);
+        emit LogKilled(msg.sender);
     }
 
     modifier whenAlive() {
