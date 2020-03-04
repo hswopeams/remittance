@@ -32,9 +32,9 @@ contract Remittance is Killable {
         uint256 expiration;
     }
     
-    event LogTransferInitiated(address indexed sender, uint256 amount, uint256 expiration);
-    event LogTransferCancelled(address indexed sender, uint256 amount, uint256 expiration);
-    event LogFundsTransferred(address indexed exchangeShop, uint256 amount);
+    event LogTransferInitiated(address indexed sender, bytes32 hashedRecipientPassword, uint256 amount, uint256 expiration);
+    event LogTransferCancelled(address indexed sender, bytes32 hashedRecipientPassword, uint256 amount, uint256 expiration);
+    event LogFundsTransferred(address indexed exchangeShop, bytes32 hashedRecipientPassword, uint256 amount);
     event LogExchangeShopRegistered(address indexed exchangeShop);
     event LogExchangeShopDeregistered(address indexed exchangeShop);
     
@@ -67,7 +67,7 @@ contract Remittance is Killable {
         require(transactions[hashedRecipientPassword].sender == address(0), "Recipient password has already been used");
         require(msg.value > 0, "No Ether sent");
         transactions[hashedRecipientPassword] = Transaction(msg.sender, msg.value, expiration);
-        emit LogTransferInitiated(msg.sender, msg.value, transactions[hashedRecipientPassword].expiration);
+        emit LogTransferInitiated(msg.sender, hashedRecipientPassword, msg.value, transactions[hashedRecipientPassword].expiration);
     }
 
     function cancelTransfer(bytes32 hashedRecipientPassword) public payable whenAlive {
@@ -76,7 +76,7 @@ contract Remittance is Killable {
         Transaction storage transaction = transactions[hashedRecipientPassword];
         require(now > transaction.expiration, "Transaction has not yet expired");
 
-        emit LogTransferCancelled(msg.sender, transaction.amount, transaction.expiration);
+        emit LogTransferCancelled(msg.sender, hashedRecipientPassword, transaction.amount, transaction.expiration);
 
         /**
          * Functional delete of transaction values except sender.
@@ -98,7 +98,7 @@ contract Remittance is Killable {
         require(amount > 0, "Remittance funds not available");
         require(now < transaction.expiration, "Transaction has expired");
         
-        emit LogFundsTransferred(msg.sender, amount);
+        emit LogFundsTransferred(msg.sender, hashedReecipientPassword, amount);
  
         /**
          * Functional delete of transaction values except sender.

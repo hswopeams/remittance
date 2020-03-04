@@ -15,11 +15,11 @@ contract("Remittance Error Test", async accounts => {
     let passwordCarol;
     let originalBlock;
     let expiration;
-    let SECONDS_IN_DAY;
-    let ZERO_ADDRESS;
-    let PASSWORD_RECIPIENT_1;
-    let PASSWORD_RECIPIENT_2;
-    let INVALID_PASSWORDS;
+    const SECONDS_IN_DAY = 86400;
+    const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
+    const PASSWORD_RECIPIENT_1 = "w5S2hsdN";
+    const PASSWORD_RECIPIENT_2 = "RKH33Trj";
+    const INVALID_PASSWORDS = ['0x0000000000000000000000000000000000000000000000000000000000000000','0x00','0x0'];
     
   
   
@@ -29,20 +29,12 @@ contract("Remittance Error Test", async accounts => {
 
         //Set up accounts for parties. In truffel owner = accounts[0]. 
         [owner,alice,bob,carol,dan,ellen,frank, safeguard] = accounts; 
-
-        ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
-        INVALID_PASSWORDS = ['0x0000000000000000000000000000000000000000000000000000000000000000','0x00','0x0'];
         
-        //Generated using random.org
-        PASSWORD_RECIPIENT_1 = "w5S2hsdN";
-        PASSWORD_RECIPIENT_2 = "RKH33Trj";
-
-        SECONDS_IN_DAY = 86400;
     });
 
      //Run before each test case
      beforeEach("deploying new instance", async () => {
-        instance = await Remittance.new();
+        instance = await Remittance.new({ from: owner });
 
         originalBlock = await web3.eth.getBlock('latest');
         let twentyMinutesLater = new Date(originalBlock.timestamp * 1000);
@@ -117,13 +109,27 @@ contract("Remittance Error Test", async accounts => {
 
     });
 
-    it('should revert if recipient password has already been used when initiating transfer', async () => {
+    it('should revert if recipient password has already been used when initiating transfer from same person', async () => {
         const hashedPassword = await instance.generateHash(PASSWORD_RECIPIENT_1);
 
         await instance.initiateTransfer(hashedPassword, expiration, {from: alice, value: 2500});
 
         await truffleAssert.reverts(
             instance.initiateTransfer(hashedPassword, expiration, {from: alice, value: 2500}),
+            "Recipient password has already been used"
+        );        
+    });
+
+    it('should revert if recipient password has already been used when initiating transfer from different person', async () => {
+        const hashedPassword = await instance.generateHash(PASSWORD_RECIPIENT_1);
+        let tenMinutesLater = new Date(originalBlock.timestamp * 1000);
+        tenMinutesLater.setMinutes(tenMinutesLater.getMinutes() + 10);
+        let tenMinuteexpiration = Math.floor(tenMinutesLater.getTime()/1000);
+
+        await instance.initiateTransfer(hashedPassword, expiration, {from: alice, value: 2500});
+
+        await truffleAssert.reverts(
+            instance.initiateTransfer(hashedPassword, tenMinuteexpiration, {from: dan, value: 1000}),
             "Recipient password has already been used"
         );        
     });

@@ -12,10 +12,10 @@ contract("Remittance Happy Flow Test", async accounts => {
     let instance;
     let owner,alice,bob,carol,dan,ellen,frank, safeguard;
     let expiration;
-    let SECONDS_IN_DAY;
-    let ZERO_ADDRESS;
-    let PASSWORD_RECIPIENT_1;
-    let PASSWORD_RECIPIENT_2;
+    const SECONDS_IN_DAY = 86400;
+    const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
+    const PASSWORD_RECIPIENT_1 = "w5S2hsdN";
+    const PASSWORD_RECIPIENT_2 = "RKH33Trj";
   
   
     // Runs before all tests in this block.
@@ -23,15 +23,7 @@ contract("Remittance Happy Flow Test", async accounts => {
         assert.isAtLeast(accounts.length,8);
 
         //Set up accounts for parties. In truffel owner = accounts[0].
-        [owner,alice,bob,carol,dan,ellen,frank,safeguard] = accounts; 
-
-        ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
-
-        //Generated using random.org
-        PASSWORD_RECIPIENT_1 = "w5S2hsdN";
-        PASSWORD_RECIPIENT_2 = "RKH33Trj";
-
-        SECONDS_IN_DAY = 86400;
+        [owner,alice,bob,carol,dan,ellen,frank,safeguard] = accounts;
     });
 
      //Run before each test case
@@ -76,7 +68,7 @@ contract("Remittance Happy Flow Test", async accounts => {
         const txObj = await instance.initiateTransfer(hashedRecipientPassword1, expiration, {from: dan, value: 2500});
        
         truffleAssert.eventEmitted(txObj.receipt, 'LogTransferInitiated', (ev) => {
-            return ev.sender == dan && expect(ev.amount).to.eq.BN(2500);
+            return ev.sender == dan && expect(ev.amount).to.eq.BN(2500) && ev.expiration == expiration && ev.hashedRecipientPassword == hashedRecipientPassword1;
         });  
         
         assert.strictEqual(txObj.receipt.logs.length, 1, 'Incorrect number of events emitted');
@@ -88,7 +80,7 @@ contract("Remittance Happy Flow Test", async accounts => {
         const txObj2 = await instance.initiateTransfer(hashedRecipientPassword2, expiration, {from: bob, value: 1000});
 
         truffleAssert.eventEmitted(txObj2.receipt, 'LogTransferInitiated', (ev) => {
-            return ev.sender == bob && expect(ev.amount).to.eq.BN(1000);
+            return ev.sender == bob && expect(ev.amount).to.eq.BN(1000) && ev.expiration == expiration && ev.hashedRecipientPassword == hashedRecipientPassword2;
         }); 
 
         assert.strictEqual(txObj.receipt.logs.length, 1, 'Incorrect number of events emitted');
@@ -128,7 +120,7 @@ contract("Remittance Happy Flow Test", async accounts => {
         expect(new BN(newAccountBalanceExchangeShop)).to.eq.BN(expectedBalanceExchangeShop);
         
         truffleAssert.eventEmitted(txObj1.receipt, 'LogFundsTransferred', (ev) => {    
-            return ev.exchangeShop == carol && expect(ev.amount).to.eq.BN(2500);
+            return ev.exchangeShop == carol && expect(ev.amount).to.eq.BN(2500) && ev.hashedRecipientPassword == hashedRecipientPassword;
         });  
 
         assert.strictEqual(txObj1.receipt.logs.length, 1, 'Incorrect number of events emitted');
@@ -165,7 +157,7 @@ contract("Remittance Happy Flow Test", async accounts => {
         expect(new BN(newAccountBalanceExchangeShop1)).to.eq.BN(expectedBalanceExchangeShop1);
         
         truffleAssert.eventEmitted(txObj2.receipt, 'LogFundsTransferred', (ev) => {    
-            return ev.exchangeShop == carol && expect(ev.amount).to.eq.BN(2500);
+            return ev.exchangeShop == carol && expect(ev.amount).to.eq.BN(2500) && ev.hashedRecipientPassword == hashedRecipientPassword1;
         });  
 
         assert.strictEqual(txObj2.receipt.logs.length, 1, 'Incorrect number of events emitted');
@@ -182,7 +174,7 @@ contract("Remittance Happy Flow Test", async accounts => {
         expect(new BN(newAccountBalanceExchangeShop2)).to.eq.BN(expectedBalanceExchangeShop2);
         
         truffleAssert.eventEmitted(txObj3.receipt, 'LogFundsTransferred', (ev) => {
-            return ev.exchangeShop == frank && expect(ev.amount).to.eq.BN(5000);
+            return ev.exchangeShop == frank && expect(ev.amount).to.eq.BN(5000) && ev.hashedRecipientPassword == hashedRecipientPassword2;
         });  
 
         assert.strictEqual(txObj3.receipt.logs.length, 1, 'Incorrect number of events emitted');
@@ -308,7 +300,7 @@ contract("Remittance Happy Flow Test", async accounts => {
         const txObj2 = await instance.cancelTransfer(hashedRecipientPassword, {from: dan});
 
         truffleAssert.eventEmitted(txObj2.receipt, 'LogTransferCancelled', (ev) => {  
-            return ev.sender == dan && expect(ev.amount).to.eq.BN(2500) && ev.expiration == expiration;
+            return ev.sender == dan && expect(ev.amount).to.eq.BN(2500) && ev.expiration == expiration && ev.hashedRecipientPassword == hashedRecipientPassword;
         });  
         
         assert.strictEqual(txObj2.receipt.logs.length, 1, 'Incorrect number of events emitted');

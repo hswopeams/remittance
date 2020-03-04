@@ -25,7 +25,8 @@ describe("Testing Helper Functions", () => {
         const newBlock = await helper.advanceTimeAndBlock(advancement);
         const timeDiff = newBlock.timestamp - originalBlock.timestamp;
 
-        assert.isTrue(timeDiff >= advancement);
+        assert.isAtLeast(timeDiff, advancement, 'Expected ' + timeDiff + ' to be greater or equal to ' + advancement);
+
     });
 
 });
