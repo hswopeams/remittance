@@ -113,9 +113,7 @@ contract Remittance is Killable {
     }
 
     function generateHash(bytes32 plainPassword) public view returns (bytes32) {
-        //bytes memory byteString = bytes(plainPassword);
-        //require(byteString.length > 0 && byteString[0] != " ", "Password cannot be empty");
-        require(plainPassword != nullPassword, "Recipient password is invalid");
+        require(plainPassword != nullPassword, "Password cannot be empty");
         return keccak256(abi.encodePacked(address(this), plainPassword));
     }
 
