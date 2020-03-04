@@ -85,7 +85,7 @@ contract Remittance is Killable {
         transactions[hashedRecipientPassword].amount = 0;
     }
 
-    function withdrawFunds(string memory plainRecipientPassword) public whenAlive {
+    function withdrawFunds(bytes32 plainRecipientPassword) public whenAlive {
         require(exchangeShops[msg.sender], "Exchange shop is not a registered exchange shop");
 
         bytes32 hashedReecipientPassword = generateHash(plainRecipientPassword);
@@ -112,9 +112,10 @@ contract Remittance is Killable {
    
     }
 
-    function generateHash(string memory plainPassword) public view returns (bytes32) {
-        bytes memory byteString = bytes(plainPassword);
-        require(byteString.length > 0 && byteString[0] != " ", "Password cannot be empty");
+    function generateHash(bytes32 plainPassword) public view returns (bytes32) {
+        //bytes memory byteString = bytes(plainPassword);
+        //require(byteString.length > 0 && byteString[0] != " ", "Password cannot be empty");
+        require(plainPassword != nullPassword, "Recipient password is invalid");
         return keccak256(abi.encodePacked(address(this), plainPassword));
     }
 

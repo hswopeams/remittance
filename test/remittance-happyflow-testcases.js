@@ -62,8 +62,8 @@ contract("Remittance Happy Flow Test", async accounts => {
 
 
     it('should allow anyone to initiate a funds transfer to any other party via any exchange shop', async () => {
-        const hashedRecipientPassword1 = await instance.generateHash(PASSWORD_RECIPIENT_1, {from: dan});
-        const hashedRecipientPassword2 = await instance.generateHash(PASSWORD_RECIPIENT_2, {from: dan});
+        const hashedRecipientPassword1 = await instance.generateHash(web3.utils.toHex(PASSWORD_RECIPIENT_1), {from: dan});
+        const hashedRecipientPassword2 = await instance.generateHash(web3.utils.toHex(PASSWORD_RECIPIENT_2), {from: dan});
 
         const txObj = await instance.initiateTransfer(hashedRecipientPassword1, expiration, {from: dan, value: 2500});
        
@@ -94,7 +94,7 @@ contract("Remittance Happy Flow Test", async accounts => {
 
 
    it('should allow an exchange shop proprietor to withdraw funds from the contract if the recipeient\'s password is valid', async () => {
-        const hashedRecipientPassword = await instance.generateHash(PASSWORD_RECIPIENT_1, {from: dan});
+        const hashedRecipientPassword = await instance.generateHash(web3.utils.toHex(PASSWORD_RECIPIENT_1), {from: dan});
         const startingAccountBlanceExchangeShop = new BN(await web3.eth.getBalance(carol));
 
         //Register Carol as exchange shop proprietor
@@ -109,7 +109,7 @@ contract("Remittance Happy Flow Test", async accounts => {
         await instance.initiateTransfer(hashedRecipientPassword, expiration, {from: dan, value: 2500});
     
         //Carol withdraws funds associated with transaction ID from contract and gives cash to Ellen out-of-process
-        const txObj1 = await instance.withdrawFunds(PASSWORD_RECIPIENT_1, {from: carol});
+        const txObj1 = await instance.withdrawFunds(web3.utils.toHex(PASSWORD_RECIPIENT_1), {from: carol});
         const withdrawGasPrice = (await web3.eth.getTransaction(txObj1.tx)).gasPrice;
         const withdrawTxPrice = withdrawGasPrice * txObj1.receipt.gasUsed;
 
@@ -127,10 +127,11 @@ contract("Remittance Happy Flow Test", async accounts => {
         
     });
 
+    
     it('should allow different exchange shop proprietors to withdraw funds from the contract for different receivers', async () => {
-        const hashedRecipientPassword1 = await instance.generateHash(PASSWORD_RECIPIENT_1, {from: dan});
+        const hashedRecipientPassword1 = await instance.generateHash(web3.utils.toHex(PASSWORD_RECIPIENT_1), {from: dan});
         const startingAccountBlanceExchangeShop1 = new BN(await web3.eth.getBalance(carol));
-        const hashedRecipientPassword2 = await instance.generateHash(PASSWORD_RECIPIENT_2, {from: alice});
+        const hashedRecipientPassword2 = await instance.generateHash(web3.utils.toHex(PASSWORD_RECIPIENT_2), {from: alice});
         const startingAccountBlanceExchangeShop2 = new BN(await web3.eth.getBalance(frank));
 
         //Register Carol as exchange shop proprietor
@@ -146,7 +147,7 @@ contract("Remittance Happy Flow Test", async accounts => {
         await instance.initiateTransfer(hashedRecipientPassword2, expiration, {from: alice, value: 5000});
        
         //Carol withdraws funds associated with first transaction from contract and gives cash to Ellen out-of-process
-        const txObj2 = await instance.withdrawFunds(PASSWORD_RECIPIENT_1, {from: carol});
+        const txObj2 = await instance.withdrawFunds(web3.utils.toHex(PASSWORD_RECIPIENT_1), {from: carol});
         const withdrawGasPriceCarol = (await web3.eth.getTransaction(txObj2.tx)).gasPrice;
         const withdrawTxPriceCarol = withdrawGasPriceCarol * txObj2.receipt.gasUsed;
 
@@ -163,7 +164,7 @@ contract("Remittance Happy Flow Test", async accounts => {
         assert.strictEqual(txObj2.receipt.logs.length, 1, 'Incorrect number of events emitted');
         
         //Frank withdraws funds associated with first transaction from contract and gives cash to Bob out-of-process
-        const txObj3 = await instance.withdrawFunds(PASSWORD_RECIPIENT_2, {from: frank});
+        const txObj3 = await instance.withdrawFunds(web3.utils.toHex(PASSWORD_RECIPIENT_2), {from: frank});
         const withdrawGasPriceFrank = (await web3.eth.getTransaction(txObj3.tx)).gasPrice;
         const withdrawTxPriceFrank = withdrawGasPriceFrank * txObj3.receipt.gasUsed;
 
@@ -183,7 +184,7 @@ contract("Remittance Happy Flow Test", async accounts => {
 
    
     it('should functionally delete transaction details except sender after funds have been withdrawn', async () => {
-        const hashedRecipientPassword1  = await instance.generateHash(PASSWORD_RECIPIENT_1, {from: dan});
+        const hashedRecipientPassword1  = await instance.generateHash(web3.utils.toHex(PASSWORD_RECIPIENT_1), {from: dan});
 
         //Register Carol as exchange shop proprietor
         const txObj = await instance.registerExchangeShop(carol);
@@ -192,25 +193,24 @@ contract("Remittance Happy Flow Test", async accounts => {
         await instance.initiateTransfer(hashedRecipientPassword1, expiration, {from: dan, value: 2500});
 
         //Carol withdraws funds associated with transaction ID from escrow account and gives cash to Ellen out-of-process
-        const txObj2 = await instance.withdrawFunds(PASSWORD_RECIPIENT_1, {from: carol});
+        const txObj2 = await instance.withdrawFunds(web3.utils.toHex(PASSWORD_RECIPIENT_1), {from: carol});
 
         const transaction = await instance.transactions(hashedRecipientPassword1);
         assert.equal(transaction.amount, 0, "Transaction amount isn't 0");
         assert.equal(transaction.sender, dan, "Transaction sender isn't Dan");
         assert.equal(transaction.expiration, 0, "Transaction expiration isn't 0");
     });
-
+ 
  
     it('should allow public variables to be retrieved with built-in getters', async () => {
-       const hashedRecipientPassword1  = await instance.generateHash(PASSWORD_RECIPIENT_1, {from: dan});
-      // const hashedRecipientPassword1  = await instance.generateHash(web3.utils.toHex(PASSWORD_RECIPIENT_1));
+        const hashedRecipientPassword1  = await instance.generateHash(web3.utils.toHex(PASSWORD_RECIPIENT_1), {from: dan});
 
         await instance.registerExchangeShop(carol);
 
         await instance.initiateTransfer(hashedRecipientPassword1, expiration, {from: dan, value: 2500});
       
         const transaction = await instance.transactions(hashedRecipientPassword1);
-        assert.equal(transaction.sender, dan, "sebder isn't Dan");
+        assert.equal(transaction.sender, dan, "sender isn't Dan");
         expect(transaction.amount).to.eq.BN(2500);
 
     });
@@ -251,9 +251,9 @@ contract("Remittance Happy Flow Test", async accounts => {
         assert.strictEqual(txObj.receipt.logs.length, 1, 'Incorrect number of events emitted');
  
     });
- 
+
     it('should allow owner to transfer contract balance to a safeguard address when killed', async () => {
-        const hashedRecipientPassword1 = await instance.generateHash(PASSWORD_RECIPIENT_1, {from: dan});
+        const hashedRecipientPassword1 = await instance.generateHash(web3.utils.asciiToHex(PASSWORD_RECIPIENT_1), {from: dan});
 
         await instance.initiateTransfer(hashedRecipientPassword1, expiration, {from: dan, value: 2500});
 
@@ -291,7 +291,7 @@ contract("Remittance Happy Flow Test", async accounts => {
 
 
     it('should allow sender to cancel the transfer after expiration time', async () => {
-        const hashedRecipientPassword = await instance.generateHash(PASSWORD_RECIPIENT_1);
+        const hashedRecipientPassword = await instance.generateHash(web3.utils.asciiToHex(PASSWORD_RECIPIENT_1), {from: dan});
        
         const txObj = await instance.initiateTransfer(hashedRecipientPassword, expiration, {from: dan, value: 2500});   
 
@@ -307,14 +307,20 @@ contract("Remittance Happy Flow Test", async accounts => {
     });
 
 
-    it('should generate a hash for a plaintext password', async () => {
-        const hashedPassword = web3.utils.soliditySha3(instance.address,PASSWORD_RECIPIENT_1);
-       
-        const generatedHash = await instance.generateHash(PASSWORD_RECIPIENT_1, {from: owner});
 
-        assert.equal(generatedHash, hashedPassword, "Hashes don't match");
+   it('should generate a hash for a plaintext password', async () => {
+    const hexValuePassword = web3.utils.asciiToHex(PASSWORD_RECIPIENT_1);
 
-    });
+    const hashedPassword = web3.utils.soliditySha3(
+        { value: instance.address, type: "address" },
+        { value: hexValuePassword, type: "bytes32" });
+
+    const generatedHash  = await instance.generateHash(hexValuePassword, {from: owner});
+
+    assert.equal(generatedHash, hashedPassword, "Hashes don't match");
+
+});
+
   
 });//end test contract
 
