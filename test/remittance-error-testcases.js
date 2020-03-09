@@ -36,12 +36,12 @@ contract("Remittance Error Test", async accounts => {
      beforeEach("deploying new instance", async () => {
         instance = await Remittance.new({ from: owner });
 
-        originalBlock = await web3.eth.getBlock('latest');
-        let twentyMinutesLater = new Date(originalBlock.timestamp * 1000);
-        twentyMinutesLater.setMinutes(twentyMinutesLater.getMinutes() + 20);
-        expiration = Math.floor(twentyMinutesLater.getTime()/1000);
+        const transaction = await web3.eth.getTransaction(instance.transactionHash);
+        const deploymentBlock = await web3.eth.getBlock(transaction.blockNumber);
+        const date = new Date(deploymentBlock.timestamp);
+        expiration = date.getTime() + SECONDS_IN_DAY;
     });
-
+/*
     it('should revert when the fallback function is called', async () => {
         await truffleAssert.reverts(
             instance.sendTransaction({
@@ -76,9 +76,10 @@ contract("Remittance Error Test", async accounts => {
     
     it('should revert if no ether is sent when initiating transfer', async () => {
        const hashedPassword = await instance.generateHash(web3.utils.toHex(PASSWORD_RECIPIENT_1), {from: alice});
+       const daysAfter = 14;
 
         await truffleAssert.reverts(
-            instance.initiateTransfer(hashedPassword, expiration, {from: alice}),
+            instance.initiateTransfer(hashedPassword, daysAfter, {from: alice}),
             "No Ether sent"
         );        
     });
@@ -99,10 +100,11 @@ contract("Remittance Error Test", async accounts => {
     });
 
     it('should revert if password is invlaid when initiating transfer', async () => {
+        const daysAfter = 2;
         
         INVALID_PASSWORDS.forEach( async item => {
             await truffleAssert.reverts(
-                instance.initiateTransfer(item, expiration, {from: alice, value: 2500}),
+                instance.initiateTransfer(item, daysAfter, {from: alice, value: 2500}),
                 "Recipient password is invalid"
             );   
         });
@@ -111,25 +113,24 @@ contract("Remittance Error Test", async accounts => {
 
     it('should revert if recipient password has already been used when initiating transfer from same person', async () => {
         const hashedPassword = await instance.generateHash(web3.utils.toHex(PASSWORD_RECIPIENT_1), {from: alice});
+        const daysAfter = 14;
 
-        await instance.initiateTransfer(hashedPassword, expiration, {from: alice, value: 2500});
+        await instance.initiateTransfer(hashedPassword, daysAfter, {from: alice, value: 2500});
 
         await truffleAssert.reverts(
-            instance.initiateTransfer(hashedPassword, expiration, {from: alice, value: 2500}),
+            instance.initiateTransfer(hashedPassword, daysAfter, {from: alice, value: 2500}),
             "Recipient password has already been used"
         );        
     });
 
     it('should revert if recipient password has already been used when initiating transfer from different person', async () => {
         const hashedPassword = await instance.generateHash(web3.utils.toHex(PASSWORD_RECIPIENT_1), {from: alice});
-        let tenMinutesLater = new Date(originalBlock.timestamp * 1000);
-        tenMinutesLater.setMinutes(tenMinutesLater.getMinutes() + 10);
-        let tenMinuteexpiration = Math.floor(tenMinutesLater.getTime()/1000);
+        const daysAfter = 7;
 
-        await instance.initiateTransfer(hashedPassword, expiration, {from: alice, value: 2500});
+        await instance.initiateTransfer(hashedPassword, daysAfter, {from: alice, value: 2500});
 
         await truffleAssert.reverts(
-            instance.initiateTransfer(hashedPassword, tenMinuteexpiration, {from: dan, value: 1000}),
+            instance.initiateTransfer(hashedPassword, daysAfter, {from: dan, value: 1000}),
             "Recipient password has already been used"
         );        
     });
@@ -137,9 +138,10 @@ contract("Remittance Error Test", async accounts => {
 
     it('should revert if recipient password is incorrect or empty', async () => {
         const hashedRecipientPassword = await instance.generateHash(web3.utils.toHex(PASSWORD_RECIPIENT_1), {from: dan});
+        const daysAfter = 365;
 
         await instance.registerExchangeShop(carol, {from: owner});
-        await instance.initiateTransfer(hashedRecipientPassword,expiration, {from: dan, value: 2500});
+        await instance.initiateTransfer(hashedRecipientPassword, daysAfter, {from: dan, value: 2500});
 
         await truffleAssert.reverts(
             instance.withdrawFunds(web3.utils.toHex(PASSWORD_RECIPIENT_2), {from: carol}),
@@ -158,30 +160,28 @@ contract("Remittance Error Test", async accounts => {
         ); 
         
     });
-
-    it('should revert if the expiration is not in the future when initiating transfer', async () => {
+*/
+    it('should revert if daysAfter must be valid when initiating transfer', async () => {
         const hashedPassword = await instance.generateHash(web3.utils.toHex(PASSWORD_RECIPIENT_1), {from: alice});
-
-        originalBlock = await web3.eth.getBlock('latest');
-        let tenSecondsEarlier = new Date(originalBlock.timestamp * 1000);
-        tenSecondsEarlier.setSeconds(tenSecondsEarlier.getSeconds() - 10);
-        expiration = Math.floor(tenSecondsEarlier.getTime()/1000);
-
+        
+  
         await truffleAssert.reverts(
-            instance.initiateTransfer(hashedPassword, originalBlock.timestamp, {from: alice, value: 2500}),
-            "Expiration time must be in the future"
+            instance.initiateTransfer(hashedPassword, 0, {from: alice, value: 2500}),
+            "Days after must be between 1 and 14"
         );        
 
         await truffleAssert.reverts(
-            instance.initiateTransfer(hashedPassword, expiration, {from: alice, value: 2500}),
-            "Expiration time must be in the future"
+            instance.initiateTransfer(hashedPassword, -1, {from: alice, value: 2500}),
+            "Days after must be between 1 and 14"
         ); 
+      
     });
-
+/*
     it('should revert if transaction has not yet expirted when transaction is cancelled', async () => {
         const hashedPassword = await instance.generateHash(web3.utils.toHex(PASSWORD_RECIPIENT_1), {from: alice});
+        const daysAfter = 1;
 
-        await instance.initiateTransfer(hashedPassword, expiration, {from: alice, value: 2500});
+        await instance.initiateTransfer(hashedPassword, daysAfter, {from: alice, value: 2500});
      
         await truffleAssert.reverts(
             instance.cancelTransfer(hashedPassword, {from: alice}),
@@ -192,8 +192,9 @@ contract("Remittance Error Test", async accounts => {
     it('should revert if recipeient password is incorrect when transaction is cancelled', async () => {
         const hashedPassword = await instance.generateHash(web3.utils.toHex(PASSWORD_RECIPIENT_1), {from: alice});
         const hashedPassword2 = await instance.generateHash(web3.utils.toHex(PASSWORD_RECIPIENT_2), {from: alice});
+        const daysAfter = 1;
 
-        await instance.initiateTransfer(hashedPassword, expiration, {from: alice, value: 2500});
+        await instance.initiateTransfer(hashedPassword, daysAfter, {from: alice, value: 2500});
 
         const advancement = SECONDS_IN_DAY;
         await helper.advanceTimeAndBlock(advancement);
@@ -206,10 +207,11 @@ contract("Remittance Error Test", async accounts => {
 
     it('should revert if transaction has already been cancelled', async () => {
         const hashedPassword = await instance.generateHash(web3.utils.toHex(PASSWORD_RECIPIENT_1), {from: alice});
+        const daysAfter = 1;
 
         await instance.initiateTransfer(hashedPassword, expiration, {from: alice, value: 2500});
 
-        const advancement = SECONDS_IN_DAY;
+        const advancement = SECONDS_IN_DAY +1;
         await helper.advanceTimeAndBlock(advancement);
 
         await instance.cancelTransfer(hashedPassword, {from: alice});
@@ -222,10 +224,11 @@ contract("Remittance Error Test", async accounts => {
    
     it('should only allow the party who initiated the transfer to cancel the transaction', async () => {
         const hashedPassword = await instance.generateHash(web3.utils.toHex(PASSWORD_RECIPIENT_1), {from: alice});
+        const daysAfter = 1;
 
         await instance.initiateTransfer(hashedPassword, expiration, {from: alice, value: 2500});
 
-        const advancement = SECONDS_IN_DAY;
+        const advancement = SECONDS_IN_DAY +1;
         await helper.advanceTimeAndBlock(advancement);
      
         await truffleAssert.reverts(
@@ -245,11 +248,12 @@ contract("Remittance Error Test", async accounts => {
 
     it('should not allow certain functions to be called if the contract has been killed', async () => {
         const hashedRecipientPassword = await instance.generateHash(web3.utils.toHex(PASSWORD_RECIPIENT_1), {from: dan}); 
+        const daysAfter = 30;
         await instance.pause({ from: owner });
         await instance.kill({ from: owner });
       
         await truffleAssert.reverts(
-            instance.initiateTransfer(hashedRecipientPassword, expiration, {from: dan, value: 2500}),
+            instance.initiateTransfer(hashedRecipientPassword, daysAfter, {from: dan, value: 2500}),
             "Killable: killed"
         );
 
@@ -305,7 +309,7 @@ contract("Remittance Error Test", async accounts => {
         );
        
     });
-  
+  */
    
 });//end test contract
 

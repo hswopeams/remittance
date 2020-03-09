@@ -37,7 +37,6 @@ contract Remittance is Killable {
     event LogFundsTransferred(address indexed exchangeShop, bytes32 hashedRecipientPassword, uint256 amount);
     event LogExchangeShopRegistered(address indexed exchangeShop);
     event LogExchangeShopDeregistered(address indexed exchangeShop);
-    
 
     constructor() public {
     }
@@ -46,6 +45,12 @@ contract Remittance is Killable {
         revert("Fallback function not available");
     }
 
+    /**
+     * Register an exchange shop that can participate in remittances. Only the contract owner may call the function.
+     * @param exchangeShop - the address of the exchange shop to be registered
+     * @dev stores the address in mapping 'exchangeShops'
+     * @return bool returns true if registration is successful
+     */
     function registerExchangeShop(address exchangeShop) public onlyOwner returns (bool) {
         require(exchangeShop != address(0), "Exchange shop is the zero address");
         require(!exchangeShops[exchangeShop], "Exchange shop already registered");
@@ -54,6 +59,12 @@ contract Remittance is Killable {
         return true;
     }
 
+    /**
+     * Deregister an exchange shop so that it can no longer perticipate in remittances. Only the contract owner may call the function.
+     * @param exchangeShop - the address of the exchange shop to be eregistered
+     * @dev removes the address from mapping 'exchangeShops'
+     * @return bool returns true if dregistration is successful
+     */
     function deregisterExchangeShop(address exchangeShop) public onlyOwner returns (bool) {
         require(exchangeShops[exchangeShop], "Exchange shop not registered");
         exchangeShops[exchangeShop] = false;
@@ -61,15 +72,27 @@ contract Remittance is Killable {
         return true;
     }
 
-    function initiateTransfer(bytes32 hashedRecipientPassword, uint256 expiration) public payable whenAlive {
-        require(expiration > now, "Expiration time must be in the future");
+    /**
+     * A user can initiate a transfer of ether that will be remitted to the intended recipeient at an exchange shop.
+     * @param hashedRecipientPassword recipient password - determined by transfer initiator
+     * @param daysAfter number of days (between 1 and 14) after which the transfer will expire.
+     * @dev use generateHash to hash password.
+     */
+    function initiateTransfer(bytes32 hashedRecipientPassword, uint256 daysAfter) public payable whenAlive {
+        require(daysAfter > 0 && daysAfter <= 14, "Days after must be between 1 and 14");
         require(hashedRecipientPassword != nullPassword, "Recipient password is invalid");
         require(transactions[hashedRecipientPassword].sender == address(0), "Recipient password has already been used");
         require(msg.value > 0, "No Ether sent");
+        uint256 expiration = now + (daysAfter * 1 days);
         transactions[hashedRecipientPassword] = Transaction(msg.sender, msg.value, expiration);
         emit LogTransferInitiated(msg.sender, hashedRecipientPassword, msg.value, transactions[hashedRecipientPassword].expiration);
     }
 
+    /**
+     * The initiator of a transfer can cancel the transfer if the recipient has not gone to an exchange shop to collect the funds before the expiration.
+     * @param hashedRecipientPassword recipient password - determined by transfer initiator
+     * @dev use generateHash to hash password
+     */
     function cancelTransfer(bytes32 hashedRecipientPassword) public payable whenAlive {
         require(transactions[hashedRecipientPassword].amount != 0, "Transaction is invalid or has already been cancelled");
         require(transactions[hashedRecipientPassword].sender == msg.sender, "Caller did not initate the transfer or password invalid");
@@ -85,6 +108,10 @@ contract Remittance is Killable {
         transactions[hashedRecipientPassword].amount = 0;
     }
 
+    /**
+     * A registered exchange shop can collect either in the name of the reciepient of the funds. The exchange shop then remits fiat currency to recipeient
+     * @param plainRecipientPassword plaintext recipient password - determined by transfer initiator and provided by recipient
+     */
     function withdrawFunds(bytes32 plainRecipientPassword) public whenAlive {
         require(exchangeShops[msg.sender], "Exchange shop is not a registered exchange shop");
 
@@ -112,6 +139,11 @@ contract Remittance is Killable {
    
     }
 
+    /**
+     * Hash a plaintext password
+     * @param plainPassword the plaintext password to be hashed
+     * @return bytes32 returns the hashed password
+     */
     function generateHash(bytes32 plainPassword) public view returns (bytes32) {
         require(plainPassword != nullPassword, "Password cannot be empty");
         return keccak256(abi.encodePacked(address(this), plainPassword));

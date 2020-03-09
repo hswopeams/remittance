@@ -12,6 +12,7 @@ contract("Remittance Happy Flow Test", async accounts => {
     let instance;
     let owner,alice,bob,carol,dan,ellen,frank, safeguard;
     let expiration;
+    let date;
     const SECONDS_IN_DAY = 86400;
     const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
     const PASSWORD_RECIPIENT_1 = "w5S2hsdN";
@@ -30,11 +31,12 @@ contract("Remittance Happy Flow Test", async accounts => {
      beforeEach("deploying new instance", async () => {
         instance = await Remittance.new({ from: owner });
 
-        const originalBlock = await web3.eth.getBlock('latest');
-        let twentyMinutesLater = new Date(originalBlock.timestamp * 1000);
-        twentyMinutesLater.setMinutes(twentyMinutesLater.getMinutes() + 20);
-        expiration = Math.floor(twentyMinutesLater.getTime()/1000);
+        const transaction = await web3.eth.getTransaction(instance.transactionHash);
+        const deploymentBlock = await web3.eth.getBlock(transaction.blockNumber);
+        date = new Date(deploymentBlock.timestamp);
+        expiration = date.getTime() + SECONDS_IN_DAY;
     });
+
 
     it('should have starting balance of 0', async () => {
         const contractBalance = await web3.eth.getBalance(instance.address);
@@ -65,10 +67,12 @@ contract("Remittance Happy Flow Test", async accounts => {
         const hashedRecipientPassword1 = await instance.generateHash(web3.utils.toHex(PASSWORD_RECIPIENT_1), {from: dan});
         const hashedRecipientPassword2 = await instance.generateHash(web3.utils.toHex(PASSWORD_RECIPIENT_2), {from: dan});
 
-        const txObj = await instance.initiateTransfer(hashedRecipientPassword1, expiration, {from: dan, value: 2500});
+        const daysAfter = 1;
+
+        const txObj = await instance.initiateTransfer(hashedRecipientPassword1, daysAfter, {from: dan, value: 2500});
        
         truffleAssert.eventEmitted(txObj.receipt, 'LogTransferInitiated', (ev) => {
-            return ev.sender == dan && expect(ev.amount).to.eq.BN(2500) && ev.expiration == expiration && ev.hashedRecipientPassword == hashedRecipientPassword1;
+            return ev.sender == dan && expect(ev.amount).to.eq.BN(2500) && ev.hashedRecipientPassword == hashedRecipientPassword1 && ev.expiration > date.getTime();
         });  
         
         assert.strictEqual(txObj.receipt.logs.length, 1, 'Incorrect number of events emitted');
@@ -77,13 +81,13 @@ contract("Remittance Happy Flow Test", async accounts => {
         assert.equal(transaction1.amount, 2500, "Transaction amount isn't 2500");
         assert.equal(transaction1.sender, dan, "Transaction sender isn't dan's");
 
-        const txObj2 = await instance.initiateTransfer(hashedRecipientPassword2, expiration, {from: bob, value: 1000});
+        const txObj2 = await instance.initiateTransfer(hashedRecipientPassword2, daysAfter, {from: bob, value: 1000});
 
         truffleAssert.eventEmitted(txObj2.receipt, 'LogTransferInitiated', (ev) => {
-            return ev.sender == bob && expect(ev.amount).to.eq.BN(1000) && ev.expiration == expiration && ev.hashedRecipientPassword == hashedRecipientPassword2;
+            return ev.sender == bob && expect(ev.amount).to.eq.BN(1000) && ev.hashedRecipientPassword == hashedRecipientPassword2 && ev.expiration > date.getTime();
         }); 
 
-        assert.strictEqual(txObj.receipt.logs.length, 1, 'Incorrect number of events emitted');
+        assert.strictEqual(txObj2.receipt.logs.length, 1, 'Incorrect number of events emitted');
 
        
         const transaction2 = await instance.transactions(hashedRecipientPassword2);
@@ -96,6 +100,7 @@ contract("Remittance Happy Flow Test", async accounts => {
    it('should allow an exchange shop proprietor to withdraw funds from the contract if the recipeient\'s password is valid', async () => {
         const hashedRecipientPassword = await instance.generateHash(web3.utils.toHex(PASSWORD_RECIPIENT_1), {from: dan});
         const startingAccountBlanceExchangeShop = new BN(await web3.eth.getBalance(carol));
+        const daysAfter = 1;
 
         //Register Carol as exchange shop proprietor
         const txObj = await instance.registerExchangeShop(carol, {from:owner});
@@ -106,7 +111,7 @@ contract("Remittance Happy Flow Test", async accounts => {
         assert.strictEqual(txObj.receipt.logs.length, 1, 'Incorrect number of events emitted');
 
         //Dan initiates transfer of funds to Ellen
-        await instance.initiateTransfer(hashedRecipientPassword, expiration, {from: dan, value: 2500});
+        await instance.initiateTransfer(hashedRecipientPassword, daysAfter, {from: dan, value: 2500});
     
         //Carol withdraws funds associated with transaction ID from contract and gives cash to Ellen out-of-process
         const txObj1 = await instance.withdrawFunds(web3.utils.toHex(PASSWORD_RECIPIENT_1), {from: carol});
@@ -133,6 +138,7 @@ contract("Remittance Happy Flow Test", async accounts => {
         const startingAccountBlanceExchangeShop1 = new BN(await web3.eth.getBalance(carol));
         const hashedRecipientPassword2 = await instance.generateHash(web3.utils.toHex(PASSWORD_RECIPIENT_2), {from: alice});
         const startingAccountBlanceExchangeShop2 = new BN(await web3.eth.getBalance(frank));
+        const daysAfter = 1;
 
         //Register Carol as exchange shop proprietor
         const txObj = await instance.registerExchangeShop(carol, {from: owner});
@@ -141,10 +147,10 @@ contract("Remittance Happy Flow Test", async accounts => {
         const txObj1 = await instance.registerExchangeShop(frank, {from: owner});
 
         //Dan initiates transfer of funds to Ellen
-        await instance.initiateTransfer(hashedRecipientPassword1, expiration, {from: dan, value: 2500});
+        await instance.initiateTransfer(hashedRecipientPassword1, daysAfter, {from: dan, value: 2500});
        
         //Alice initiates transfer of funds to Bob
-        await instance.initiateTransfer(hashedRecipientPassword2, expiration, {from: alice, value: 5000});
+        await instance.initiateTransfer(hashedRecipientPassword2, daysAfter, {from: alice, value: 5000});
        
         //Carol withdraws funds associated with first transaction from contract and gives cash to Ellen out-of-process
         const txObj2 = await instance.withdrawFunds(web3.utils.toHex(PASSWORD_RECIPIENT_1), {from: carol});
@@ -185,12 +191,13 @@ contract("Remittance Happy Flow Test", async accounts => {
    
     it('should functionally delete transaction details except sender after funds have been withdrawn', async () => {
         const hashedRecipientPassword1  = await instance.generateHash(web3.utils.toHex(PASSWORD_RECIPIENT_1), {from: dan});
+        const daysAfter = 2;
 
         //Register Carol as exchange shop proprietor
         const txObj = await instance.registerExchangeShop(carol);
 
         //Dan initiates transfer of funds to Ellen
-        await instance.initiateTransfer(hashedRecipientPassword1, expiration, {from: dan, value: 2500});
+        await instance.initiateTransfer(hashedRecipientPassword1, daysAfter, {from: dan, value: 2500});
 
         //Carol withdraws funds associated with transaction ID from escrow account and gives cash to Ellen out-of-process
         const txObj2 = await instance.withdrawFunds(web3.utils.toHex(PASSWORD_RECIPIENT_1), {from: carol});
@@ -204,10 +211,11 @@ contract("Remittance Happy Flow Test", async accounts => {
  
     it('should allow public variables to be retrieved with built-in getters', async () => {
         const hashedRecipientPassword1  = await instance.generateHash(web3.utils.toHex(PASSWORD_RECIPIENT_1), {from: dan});
+        const daysAfter = 2;
 
         await instance.registerExchangeShop(carol);
 
-        await instance.initiateTransfer(hashedRecipientPassword1, expiration, {from: dan, value: 2500});
+        await instance.initiateTransfer(hashedRecipientPassword1, daysAfter, {from: dan, value: 2500});
       
         const transaction = await instance.transactions(hashedRecipientPassword1);
         assert.equal(transaction.sender, dan, "sender isn't Dan");
@@ -255,7 +263,9 @@ contract("Remittance Happy Flow Test", async accounts => {
     it('should allow owner to transfer contract balance to a safeguard address when killed', async () => {
         const hashedRecipientPassword1 = await instance.generateHash(web3.utils.asciiToHex(PASSWORD_RECIPIENT_1), {from: dan});
 
-        await instance.initiateTransfer(hashedRecipientPassword1, expiration, {from: dan, value: 2500});
+        const daysAfter = 14;
+
+        await instance.initiateTransfer(hashedRecipientPassword1, daysAfter, {from: dan, value: 2500});
 
         const contractBalance = await web3.eth.getBalance(instance.address);
         const safeguardStartingBalance = await web3.eth.getBalance(safeguard);
@@ -289,20 +299,20 @@ contract("Remittance Happy Flow Test", async accounts => {
     });
  
 
-
     it('should allow sender to cancel the transfer after expiration time', async () => {
         const hashedRecipientPassword = await instance.generateHash(web3.utils.asciiToHex(PASSWORD_RECIPIENT_1), {from: dan});
+        const daysAfter = 1;
        
-        const txObj = await instance.initiateTransfer(hashedRecipientPassword, expiration, {from: dan, value: 2500});   
+        const txObj = await instance.initiateTransfer(hashedRecipientPassword, daysAfter, {from: dan, value: 2500});   
 
-        const advancement = SECONDS_IN_DAY;
-        await helper.advanceTimeAndBlock(advancement);
+        const advancement = SECONDS_IN_DAY + 1;
+        await helper.advanceTime(advancement);
         const txObj2 = await instance.cancelTransfer(hashedRecipientPassword, {from: dan});
 
-        truffleAssert.eventEmitted(txObj2.receipt, 'LogTransferCancelled', (ev) => {  
-            return ev.sender == dan && expect(ev.amount).to.eq.BN(2500) && ev.expiration == expiration && ev.hashedRecipientPassword == hashedRecipientPassword;
+        truffleAssert.eventEmitted(txObj2.receipt, 'LogTransferCancelled', (ev) => {
+            return ev.sender == dan && expect(ev.amount).to.eq.BN(2500) && ev.hashedRecipientPassword == hashedRecipientPassword && ev.expiration > date.getTime();
         });  
-        
+     
         assert.strictEqual(txObj2.receipt.logs.length, 1, 'Incorrect number of events emitted');
     });
 
