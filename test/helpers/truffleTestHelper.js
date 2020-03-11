@@ -1,6 +1,6 @@
 const advanceTimeAndBlock = async (time) => {
     await advanceTime(time);
-    await advanceBlock();
+    await advanceAndGetLatestBlock();
 
     return Promise.resolve(web3.eth.getBlock('latest'));
 }
@@ -19,7 +19,7 @@ const advanceTime = (time) => {
     });
 }
 
-const advanceBlock = () => {
+const advanceAndGetLatestBlock = () => {
     return new Promise((resolve, reject) => {
         web3.currentProvider.send({
             jsonrpc: "2.0",
@@ -36,6 +36,6 @@ const advanceBlock = () => {
 
 module.exports = {
     advanceTime,
-    advanceBlock,
+    advanceAndGetLatestBlock,
     advanceTimeAndBlock
 }

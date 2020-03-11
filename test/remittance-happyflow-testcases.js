@@ -11,7 +11,6 @@ const helper = require("./helpers/truffleTestHelper");
 contract("Remittance Happy Flow Test", async accounts => {
     let instance;
     let owner,alice,bob,carol,dan,ellen,frank, safeguard;
-    let expiration;
     let date;
     const SECONDS_IN_DAY = 86400;
     const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
@@ -34,7 +33,6 @@ contract("Remittance Happy Flow Test", async accounts => {
         const transaction = await web3.eth.getTransaction(instance.transactionHash);
         const deploymentBlock = await web3.eth.getBlock(transaction.blockNumber);
         date = new Date(deploymentBlock.timestamp);
-        expiration = date.getTime() + SECONDS_IN_DAY;
     });
 
 
@@ -308,6 +306,9 @@ contract("Remittance Happy Flow Test", async accounts => {
 
         const advancement = SECONDS_IN_DAY + 1;
         await helper.advanceTime(advancement);
+
+        const startingAccountBlanceDan = new BN(await web3.eth.getBalance(dan));
+
         const txObj2 = await instance.cancelTransfer(hashedRecipientPassword, {from: dan});
 
         truffleAssert.eventEmitted(txObj2.receipt, 'LogTransferCancelled', (ev) => {
@@ -315,9 +316,18 @@ contract("Remittance Happy Flow Test", async accounts => {
         });  
      
         assert.strictEqual(txObj2.receipt.logs.length, 1, 'Incorrect number of events emitted');
+
+        const cancelGasPrice = (await web3.eth.getTransaction(txObj2.tx)).gasPrice;
+        const cancelTxPrice = cancelGasPrice * txObj2.receipt.gasUsed;
+
+        //Dan's balance after calling cancelTransfer() = Dan's balance before calling cancelTransfer() plus amount initially transferred minus price of calling cancelTransfer()
+        const expectedBalanceDan = startingAccountBlanceDan.add(new BN(2500)).sub(new BN(cancelTxPrice));
+        const newAccountBalanceDan = await web3.eth.getBalance(dan);
+
+        expect(new BN(newAccountBalanceDan)).to.eq.BN(expectedBalanceDan);
+
+
     });
-
-
 
    it('should generate a hash for a plaintext password', async () => {
     const hexValuePassword = web3.utils.asciiToHex(PASSWORD_RECIPIENT_1);

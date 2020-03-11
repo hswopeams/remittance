@@ -14,7 +14,7 @@ contract("Remittance Error Test", async accounts => {
     let passwordBob;
     let passwordCarol;
     let originalBlock;
-    let expiration;
+    let date;
     const SECONDS_IN_DAY = 86400;
     const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
     const PASSWORD_RECIPIENT_1 = "w5S2hsdN";
@@ -39,7 +39,6 @@ contract("Remittance Error Test", async accounts => {
         const transaction = await web3.eth.getTransaction(instance.transactionHash);
         const deploymentBlock = await web3.eth.getBlock(transaction.blockNumber);
         const date = new Date(deploymentBlock.timestamp);
-        expiration = date.getTime() + SECONDS_IN_DAY;
     });
 
     it('should revert when the fallback function is called', async () => {
@@ -202,7 +201,7 @@ contract("Remittance Error Test", async accounts => {
         await instance.initiateTransfer(hashedPassword, daysAfter, {from: alice, value: 2500});
 
         const advancement = SECONDS_IN_DAY;
-        await helper.advanceTimeAndBlock(advancement);
+        await helper.advanceTime(advancement);
      
         await truffleAssert.reverts(
             instance.cancelTransfer(hashedPassword2, {from: alice}),
@@ -217,7 +216,7 @@ contract("Remittance Error Test", async accounts => {
         await instance.initiateTransfer(hashedPassword, daysAfter, {from: alice, value: 2500});
 
         const advancement = SECONDS_IN_DAY +1;
-        await helper.advanceTimeAndBlock(advancement);
+        await helper.advanceTime(advancement);
 
         await instance.cancelTransfer(hashedPassword, {from: alice});
      
@@ -234,7 +233,7 @@ contract("Remittance Error Test", async accounts => {
         await instance.initiateTransfer(hashedPassword, daysAfter, {from: alice, value: 2500});
 
         const advancement = SECONDS_IN_DAY +1;
-        await helper.advanceTimeAndBlock(advancement);
+        await helper.advanceTime(advancement);
      
         await truffleAssert.reverts(
             instance.cancelTransfer(hashedPassword, {from: bob}),

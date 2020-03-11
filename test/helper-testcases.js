@@ -12,7 +12,7 @@ describe("Testing Helper Functions", () => {
         const originalBlock = await web3.eth.getBlock('latest');
         const newBlock = await web3.eth.getBlock('latest');
 
-        const newBlockHash = await helper.advanceBlock();
+        const newBlockHash = await helper.advanceAndGetLatestBlock();
 
         assert.notEqual(originalBlock.hash, newBlockHash);
         assert.notEqual(newBlock.hash, newBlockHash);
