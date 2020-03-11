@@ -187,18 +187,16 @@ const initiateTransfer = async function() {
             web3.eth.getAccounts());
             console.log("accounts ", accounts);
         const instance = await Remittance.deployed();
-       
-        const hashedPasswordRecipient = await instance.generateHash($("input[name='passwordRecipient']").val());
-     
 
-        let expiration = new Date($("input[name='expiration']").val());
-        expiration = Math.floor(expiration.getTime()/1000);
+        const hexValuePassword = web3.utils.asciiToHex($("input[name='passwordRecipient']").val());
+        const hashedPasswordRecipient = await instance.generateHash(hexValuePassword);
+    
 
         // We simulate the real call and see whether this is likely to work.
         // No point in wasting gas if we have a likely failure.
         const success = await instance.initiateTransfer.call(
             hashedPasswordRecipient,
-            expiration,
+            $("input[name='daysAfter']").val(),
             { from: $("input[name='senderAddress']").val(), value: $("input[name='amount']").val(), gas: gas });
 
         if (!success) {
@@ -207,7 +205,7 @@ const initiateTransfer = async function() {
         // Ok, we move onto the proper action.
         const txObj = await instance.initiateTransfer(
             hashedPasswordRecipient,
-            expiration,
+            $("input[name='daysAfter']").val(),
             { from: $("input[name='senderAddress']").val(), value: $("input[name='amount']").val(), gas: gas })
             //transfer takes time in real life, so we get the txHash immediately while it 
             // is mined.
@@ -257,7 +255,8 @@ const cancelTransfer = async function() {
             console.log("accounts ", accounts);
         const instance = await Remittance.deployed();
        
-        const hashedPasswordRecipient = await instance.generateHash($("input[name='passwordRecipient']").val());
+        const hexValuePassword = web3.utils.asciiToHex($("input[name='passwordRecipient']").val());
+        const hashedPasswordRecipient = await instance.generateHash(hexValuePassword);
      
         // We simulate the real call and see whether this is likely to work.
         // No point in wasting gas if we have a likely failure.
@@ -324,11 +323,12 @@ const withdrawFunds = async function() {
         }
 
         const instance = await Remittance.deployed();
+        const hexValuePassword = web3.utils.asciiToHex($("input[name='passwordRecipientWithdraw']").val());
 
         // We simulate the real call and see whether this is likely to work.
         // No point in wasting gas if we have a likely failure.
         const success = await instance.withdrawFunds.call(
-            $("input[name='passwordRecipientWithdraw']").val(),
+            hexValuePassword,
             { from: $("input[name='exchangeShopAddress']").val(), gas: gas });
         if (!success) {
             throw new Error("The transaction will fail anyway, not sending");
@@ -336,7 +336,7 @@ const withdrawFunds = async function() {
 
         // Ok, we move onto the proper action.
         const txObj = await instance.withdrawFunds(
-            $("input[name='passwordRecipientWithdraw']").val(),
+            hexValuePassword,
             { from: $("input[name='exchangeShopAddress']").val(), gas: gas })
             // withdrawFunds takes time in real life, so we get the txHash immediately while it 
             // is mined.

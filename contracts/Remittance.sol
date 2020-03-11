@@ -101,13 +101,15 @@ contract Remittance is Killable {
 
         emit LogTransferCancelled(msg.sender, hashedRecipientPassword, transaction.amount, transaction.expiration);
 
+        uint amount = transaction.amount;
+
         /**
          * Functional delete of transaction values except sender.
          * The transaction.sender is used in initiateTransfer to check if a password has been used before
          */
         transactions[hashedRecipientPassword].amount = 0;
 
-        (bool success, ) = msg.sender.call.value(transaction.amount)("");
+        (bool success, ) = msg.sender.call.value(amount)("");
         require(success, "Transfer failed.");
     }
 

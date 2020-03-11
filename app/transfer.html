@@ -70,7 +70,7 @@
     <div class="spaced">
         <p class="important">
             A sender can use this page to initiate a transfer of money to any recipient. The transfer is completed when the recipient goes to a registered Exchange Shop
-            and provides his or her password. he exchange shop proprietor withdraws funds. The recipient must provide his/her password in order for this to work.
+            and provides his or her password. The exchange shop proprietor withdraws funds. The recipient must provide his/her password in order for this to work.
             <br />
             The exchange shop proprietor giving the recipent local currency is assumed to take place out of the scope of this DApp.
         </p>
@@ -82,7 +82,7 @@
     <div class="spaced">
         Transfer <input name="amount" type="number" placeholder="0" /> Wei
         From <input name="senderAddress" type="text" placeholder="0x0000000000000000000000000000000000000000" /> 
-        Expiration <input id="expiration" type="datetime-local" name="expiration" min="2020-01-01T00">
+        Expiration <input id="daysAfter" type="number" name="daysAfter" min="1" max="14"> days in the future.
         Recipient Password <input name="passwordRecipient" type="password" />
         &nbsp;
         <button id="initiateTransfer" class="button">Initiate Transfer</button>
