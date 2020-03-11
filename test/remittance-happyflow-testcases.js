@@ -83,6 +83,7 @@ contract("Remittance Happy Flow Test", async accounts => {
 
         const txObj2 = await instance.initiateTransfer(hashedRecipientPassword2, daysAfter, {from: bob, value: 1000});
 
+
         truffleAssert.eventEmitted(txObj2.receipt, 'LogTransferInitiated', (ev) => {
             return ev.sender == bob && expect(ev.amount).to.eq.BN(1000) && ev.hashedRecipientPassword == hashedRecipientPassword2 && ev.expiration > date.getTime();
         }); 

@@ -79,7 +79,7 @@ contract Remittance is Killable {
      * @dev use generateHash to hash password.
      */
     function initiateTransfer(bytes32 hashedRecipientPassword, uint256 daysAfter) public payable whenAlive {
-        require(daysAfter > 0 && daysAfter <= 14, "Days after must be between 1 and 14");
+        require(daysAfter >= 1 && daysAfter <= 14, "Days after must be between 1 and 14");
         require(hashedRecipientPassword != nullPassword, "Recipient password is invalid");
         require(transactions[hashedRecipientPassword].sender == address(0), "Recipient password has already been used");
         require(msg.value > 0, "No Ether sent");
@@ -106,6 +106,9 @@ contract Remittance is Killable {
          * The transaction.sender is used in initiateTransfer to check if a password has been used before
          */
         transactions[hashedRecipientPassword].amount = 0;
+
+        (bool success, ) = msg.sender.call.value(transaction.amount)("");
+        require(success, "Transfer failed.");
     }
 
     /**
