@@ -15,7 +15,6 @@ pragma solidity >=0.4.25 <0.6.0;
  * If the contract is "killed", the transactions can be retrieved to keep track of which transactions have not yet been carried out
  */
 
-import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./Killable.sol";
 
