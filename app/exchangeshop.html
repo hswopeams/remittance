@@ -4,87 +4,31 @@
 <head>
     <title>Remittance GUI</title>
     <meta charset="utf-8">
-
-    <style type="text/css">
-        body {
-            font-family: Georgia, "Times New Roman",
-                Times, serif;
-            color: #053d96;
-            background-color: #98b9ed;
-            text-align: center;
-        }
-
-        h1 {
-            font-family: Helvetica, Geneva, Arial,
-                SunSans-Regular, sans-serif;
-
-        }
-
-        h3 {
-            font-family: Helvetica, Geneva, Arial,
-                SunSans-Regular, sans-serif;
-
-        }
-
-        a:link {
-            color: rgb(61, 27, 124);
-        }
-
-        a:visited {
-            color: #960561;
-        }
-
-        p.important {
-            border-style: solid;
-            border-width: 5px;
-            border-color: #053d96;
-        }
-
-        .button {
-            background-color: #053d96;
-            border: none;
-            color: white;
-            padding: 5px 20px;
-            text-align: center;
-            text-decoration: none;
-            display: inline-block;
-
-        }
-
-        .display {
-            color: #053d96;
-            font-family: Georgia, "Times New Roman",
-                Times, serif;
-            font-weight: bold;
-            font-size: 16px;
-        }
-
-        .spaced {
-            margin-top: 20px;
-            margin-bottom: 20px;
-        }
-    </style>
-
-
 </head>
 
 <body>
-    <h1>Exchange Shop</h1>
-    <div class="spaced">
-        <p class="important">
-            A sender can use this page to initiate a transfer of money to any recipient. The transfer is completed when the recipient goes to a registered Exchange Shop
-            and provides his or her password. The exchange shop proprietor withdraws funds. The recipient must provide his/her password in order for this to work.
-            <br />
-            The exchange shop proprietor giving the recipent local currency is assumed to take place out of the scope of this DApp.
-        </p>
-    </div>
-    <div class="display spaced">Exchange shop has <span id="balanceExchangeShop">Loading...</span> Wei in funds.</div>
-    Recipient Password <input name="passwordRecipientWithdraw" type="password" />
-    Exchange Shop Address <input name="exchangeShopAddress" type="text" placeholder="0x0000000000000000000000000000000000000000" /> 
-    <button class="button" id="withdraw">Withdraw</button>
-    </div>
-    <div class="display spaced">The Remittance Contract has <span id="balanceContract">Loading...</span> Wei</div>
-    <div id="status" class="display spaced"></div>
+    <h1>Exchange Shop's Page</h1>
+    <h3>The proprietor of the exhcange shop chosen by the receipient (e.g. a Wetern Union location) of the funds can use this page to the withdraws funds for a specific transfer, identified by the recipient's password. 
+        <br>
+        The recipient must provide his/her password in order for this to work.
+        <br />
+        The exchange shop proprietor  then gives the recipent local currency. This part of the process is assumed to take place out of the scope of this DApp.
+    </h3>
+    <br>
+    <br>
+    <div>Exchange shop has <span id="balanceExchangeShop">Loading...</span> Wei in funds.</div>
+    <br>
+    <br>
+    <h2>Withdraw Funds</h2>
+    <br> <label for="passwordRecipientWithdraw">Recipient Password</label><input name="passwordRecipientWithdraw" type="password" />
+    <br><br><label for="exchangeShopAddress">Exchange Shop Address</label> <input name="exchangeShopAddress" type="text" placeholder="ex. 0x0000000000000000000000000000000000000000" /> 
+    <br><button class="button" id="withdraw">Withdraw</button>
+    <br>
+    <br>
+    <div>The Remittance Contract has <span id="balanceContract">Loading...</span> Wei</div>
+    <br>
+    <br>
+    <div id="status"></div>
     <script src="js/app.js"></script>
 
 </body>

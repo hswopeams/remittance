@@ -4,93 +4,39 @@
 <head>
     <title>Remittance GUI</title>
     <meta charset="utf-8">
-    <style type="text/css">
-        body {
-            font-family: Georgia, "Times New Roman",
-                Times, serif;
-            color: #053d96;
-            background-color: #98b9ed;
-            text-align: center;
-        }
-
-        h1 {
-            font-family: Helvetica, Geneva, Arial,
-                SunSans-Regular, sans-serif;
-                
-        }
-
-        h3 {
-            font-family: Helvetica, Geneva, Arial,
-                SunSans-Regular, sans-serif;
-                
-        }
-
-        a:link {
-            color: rgb(61, 27, 124);
-        }
-
-        a:visited {
-            color: #960561;
-        }
-
-        p.important {
-            border-style: solid;
-            border-width: 5px;
-            border-color: #053d96;
-        }
-
-        .button {
-            background-color: #053d96;
-            border: none;
-            color: white;
-            padding: 5px 20px;
-            text-align: center;
-            text-decoration: none;
-            display: inline-block;
-       
-        }
-
-        .display {
-            color: #053d96;
-            font-family: Georgia, "Times New Roman",
-                Times, serif;
-            font-weight: bold;
-            font-size: 16px;
-        }
-
-        .spaced {
-            margin-top: 20px;
-            margin-bottom: 20px;
-        }
-    </style>
 </head>
 
 <body>
     <h1>Sender's Page</h1>
-    <div class="spaced">
-        <p class="important">
-            A sender can use this page to initiate a transfer of money to any recipient. The transfer is completed when the recipient goes to a registered Exchange Shop
-            and provides his or her password. The exchange shop proprietor withdraws funds. The recipient must provide his/her password in order for this to work.
-            <br />
+    <h3>
+            A sender can use this page to initiate a transfer of money to any recipient. The sender generates a one-time password and provides it to the receipient.
+            The transfer is completed when the recipient goes to a registered Exchange Shop
+            and provides his or her password. The exchange shop proprietor withdraws funds for a specific transfer. The recipient must provide his/her password in order for this to work.
+            <br/>
             The exchange shop proprietor giving the recipent local currency is assumed to take place out of the scope of this DApp.
-        </p>
-    </div>
+            <br/>
+            The initiator of the transfer can also cancel it after it has expired by only providing the receipient password.
+
+    </h3>
     <div class="spaced">
         <a target="_blank" rel="noopener noreferrer"
             href="https://www.random.org/passwords/?num=2&len=8&format=html&rnd=new">Generate One-time Recipeient Password</a>
     </div>
-    <div class="spaced">
-        Transfer <input name="amount" type="number" placeholder="0" /> Wei
-        From <input name="senderAddress" type="text" placeholder="0x0000000000000000000000000000000000000000" /> 
-        Expiration <input id="daysAfter" type="number" name="daysAfter" min="1" max="14"> days in the future.
-        Recipient Password <input name="passwordRecipient" type="password" />
-        &nbsp;
-        <button id="initiateTransfer" class="button">Initiate Transfer</button>
-        <button id="cancelTransfer" class="button">Cancel Transfer</button>
-    </div>
-    <div class="display spaced">The Remittance Contract's has <span id="balanceContract">Loading...</span> Wei</div>
-    <div id="status" class="display spaced"></div>
-    <div id="displayTransactionId" class="display spaced"></div>
+    <br>
+    <br>
+    <h2>Initiate Transfer</h2>
+    <br><label for="amount">Transfer</label> <input name="amount" type="number" placeholder="0" /> Wei
+    <br><br><label for="senderAddress">From</label> <input name="senderAddress" type="text" placeholder="ex. 0x0000000000000000000000000000000000000000" /> 
+    <br><br><label for="daysAfter">Expiration</label> <input id="daysAfter" type="number" name="daysAfter" min="1" max="14"> days in the future.
+    <br><br><label for="passwordReceipient">Recipient Password</label> <input name="passwordRecipient" type="password" />
+    <br><br><button id="initiateTransfer" class="button">Initiate Transfer</button>
+    <button id="cancelTransfer" class="button">Cancel Transfer</button>
+    <br>
+    <br>
+    <div>The Remittance Contract's has <span id="balanceContract">Loading...</span> Wei</div>
+    <br>
+    <br>
+    <div id="status"></div>
 
     <script src="js/app.js"></script>
 

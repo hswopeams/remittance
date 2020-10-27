@@ -4,83 +4,22 @@
 <head>
     <title>Remittance GUI</title>
     <meta charset="utf-8">
-    <style type="text/css">
-        body {
-            font-family: Georgia, "Times New Roman",
-                Times, serif;
-            color: #053d96;
-            background-color: #98b9ed;
-            text-align: center;
-        }
-
-        h1 {
-            font-family: Helvetica, Geneva, Arial,
-                SunSans-Regular, sans-serif;
-                
-        }
-
-        h3 {
-            font-family: Helvetica, Geneva, Arial,
-                SunSans-Regular, sans-serif;
-                
-        }
-
-        a:link {
-            color: rgb(61, 27, 124);
-        }
-
-        a:visited {
-            color: #960561;
-        }
-
-        p.important {
-            border-style: solid;
-            border-width: 5px;
-            border-color: #053d96;
-        }
-
-        .button {
-            background-color: #053d96;
-            border: none;
-            color: white;
-            padding: 5px 20px;
-            text-align: center;
-            text-decoration: none;
-            display: inline-block;
-       
-        }
-
-        .display {
-            color: #053d96;
-            font-family: Georgia, "Times New Roman",
-                Times, serif;
-            font-weight: bold;
-            font-size: 16px;
-        }
-
-        .spaced {
-            margin-top: 20px;
-            margin-bottom: 20px;
-        }
-    </style>
 </head>
 
 <body>
     <h1>Owner's Page</h1>
-    <div class="spaced">
-        <p class="important">
-           The owner of this contract can use this page to register known exchange shops.
-        </p>
-    </div>
-    <div class="spaced">
-        Exchange Shop Address <input name="exchangeShopAddress" type="text" placeholder="0x0000000000000000000000000000000000000000" /> 
-        &nbsp;
-        <button id="registerExchangeShop" class="button">Register Exchange Shop</button>
-        <button id="deRegisterExchangeShop" class="button">Deregister Exchange Shop</button>
-    </div>
+    <h3>The owner of the Remittance contract can use this page to register known exchange shops. This is analagous to Western Union registering a location.</h3>
+     
+    <h2>Register and Deregister Exchange shops</h2>
+    <br><label for="exchangeShopAddress">Exchange Shop Address</label><input name="exchangeShopAddress" type="text" placeholder="ex. 0x0000000000000000000000000000000000000000" /> 
+    <br><br><button id="registerExchangeShop" class="button">Register Exchange Shop</button>
+    <button id="deRegisterExchangeShop" class="button">Deregister Exchange Shop</button>
+    <br>
+    <br>
     <div class="display spaced">The Remittance Contract's balance is <span id="balanceContract">Loading...</span> Wei</div>
-    <div id="status" class="display spaced"></div>
-    <div id="displayTransactionId" class="display spaced"></div>
+    <br>
+    <br>
+    <div id="status"></div>
 
     <script src="js/app.js"></script>
 
