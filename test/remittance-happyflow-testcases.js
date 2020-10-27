@@ -113,7 +113,7 @@ contract("Remittance Happy Flow Test", async accounts => {
         await instance.initiateTransfer(hashedRecipientPassword, daysAfter, {from: dan, value: 2500});
     
         //Carol withdraws funds associated with transaction ID from contract and gives cash to Ellen out-of-process
-        const txObj1 = await instance.withdrawFunds(web3.utils.toHex(PASSWORD_RECIPIENT_1), {from: carol});
+        const txObj1 = await instance.withdrawFunds(hashedRecipientPassword, {from: carol});
         const withdrawGasPrice = (await web3.eth.getTransaction(txObj1.tx)).gasPrice;
         const withdrawTxPrice = withdrawGasPrice * txObj1.receipt.gasUsed;
 
@@ -123,7 +123,7 @@ contract("Remittance Happy Flow Test", async accounts => {
 
         expect(new BN(newAccountBalanceExchangeShop)).to.eq.BN(expectedBalanceExchangeShop);
         
-        truffleAssert.eventEmitted(txObj1.receipt, 'LogFundsTransferred', (ev) => {    
+        truffleAssert.eventEmitted(txObj1.receipt, 'LogFundsWithdrawn', (ev) => {    
             return ev.exchangeShop == carol && expect(ev.amount).to.eq.BN(2500) && ev.hashedRecipientPassword == hashedRecipientPassword;
         });  
 
@@ -152,7 +152,7 @@ contract("Remittance Happy Flow Test", async accounts => {
         await instance.initiateTransfer(hashedRecipientPassword2, daysAfter, {from: alice, value: 5000});
        
         //Carol withdraws funds associated with first transaction from contract and gives cash to Ellen out-of-process
-        const txObj2 = await instance.withdrawFunds(web3.utils.toHex(PASSWORD_RECIPIENT_1), {from: carol});
+        const txObj2 = await instance.withdrawFunds(hashedRecipientPassword1, {from: carol});
         const withdrawGasPriceCarol = (await web3.eth.getTransaction(txObj2.tx)).gasPrice;
         const withdrawTxPriceCarol = withdrawGasPriceCarol * txObj2.receipt.gasUsed;
 
@@ -162,14 +162,14 @@ contract("Remittance Happy Flow Test", async accounts => {
 
         expect(new BN(newAccountBalanceExchangeShop1)).to.eq.BN(expectedBalanceExchangeShop1);
         
-        truffleAssert.eventEmitted(txObj2.receipt, 'LogFundsTransferred', (ev) => {    
+        truffleAssert.eventEmitted(txObj2.receipt, 'LogFundsWithdrawn', (ev) => {    
             return ev.exchangeShop == carol && expect(ev.amount).to.eq.BN(2500) && ev.hashedRecipientPassword == hashedRecipientPassword1;
         });  
 
         assert.strictEqual(txObj2.receipt.logs.length, 1, 'Incorrect number of events emitted');
         
         //Frank withdraws funds associated with first transaction from contract and gives cash to Bob out-of-process
-        const txObj3 = await instance.withdrawFunds(web3.utils.toHex(PASSWORD_RECIPIENT_2), {from: frank});
+        const txObj3 = await instance.withdrawFunds(hashedRecipientPassword2, {from: frank});
         const withdrawGasPriceFrank = (await web3.eth.getTransaction(txObj3.tx)).gasPrice;
         const withdrawTxPriceFrank = withdrawGasPriceFrank * txObj3.receipt.gasUsed;
 
@@ -179,7 +179,7 @@ contract("Remittance Happy Flow Test", async accounts => {
 
         expect(new BN(newAccountBalanceExchangeShop2)).to.eq.BN(expectedBalanceExchangeShop2);
         
-        truffleAssert.eventEmitted(txObj3.receipt, 'LogFundsTransferred', (ev) => {
+        truffleAssert.eventEmitted(txObj3.receipt, 'LogFundsWithdrawn', (ev) => {
             return ev.exchangeShop == frank && expect(ev.amount).to.eq.BN(5000) && ev.hashedRecipientPassword == hashedRecipientPassword2;
         });  
 
@@ -199,7 +199,7 @@ contract("Remittance Happy Flow Test", async accounts => {
         await instance.initiateTransfer(hashedRecipientPassword1, daysAfter, {from: dan, value: 2500});
 
         //Carol withdraws funds associated with transaction ID from escrow account and gives cash to Ellen out-of-process
-        const txObj2 = await instance.withdrawFunds(web3.utils.toHex(PASSWORD_RECIPIENT_1), {from: carol});
+        const txObj2 = await instance.withdrawFunds(hashedRecipientPassword1, {from: carol});
 
         const transaction = await instance.transactions(hashedRecipientPassword1);
         assert.equal(transaction.amount, 0, "Transaction amount isn't 0");

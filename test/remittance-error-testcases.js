@@ -144,18 +144,18 @@ contract("Remittance Error Test", async accounts => {
 
         await truffleAssert.reverts(
             instance.withdrawFunds(web3.utils.toHex(PASSWORD_RECIPIENT_2), {from: carol}),
-            "Recipient password not valid"
+            "No remittance funds available for this password"
         );      
         
         await truffleAssert.reverts(
             instance.withdrawFunds(web3.utils.toHex(' '), {from: carol}),
-            "Password cannot be empty"
+            "No remittance funds available for this password"
 
         ); 
 
         await truffleAssert.reverts(
             instance.withdrawFunds(web3.utils.toHex(''), {from: carol}),
-            "Password cannot be empty"
+            "No remittance funds available for this password"
         ); 
         
     });

@@ -33,7 +33,7 @@ contract Remittance is Killable {
     
     event LogTransferInitiated(address indexed sender, bytes32 hashedRecipientPassword, uint256 amount, uint256 expiration);
     event LogTransferCancelled(address indexed sender, bytes32 hashedRecipientPassword, uint256 amount, uint256 expiration);
-    event LogFundsTransferred(address indexed exchangeShop, bytes32 hashedRecipientPassword, uint256 amount);
+    event LogFundsWithdrawn(address indexed exchangeShop, bytes32 hashedRecipientPassword, uint256 amount);
     event LogExchangeShopRegistered(address indexed exchangeShop);
     event LogExchangeShopDeregistered(address indexed exchangeShop);
 
@@ -113,34 +113,30 @@ contract Remittance is Killable {
     }
 
     /**
-     * A registered exchange shop can collect either in the name of the reciepient of the funds. The exchange shop then remits fiat currency to recipeient
-     * @param plainRecipientPassword plaintext recipient password - determined by transfer initiator and provided by recipient
+     * A registered exchange shop can collect in the name of the reciepient of the funds. 
+     * The exchange shop then remits fiat currency to recipeient
+     * @param hashedRecipientPassword hashed recipient password - determined by transfer initiator and provided by recipient, hashed by caller
      */
-    function withdrawFunds(bytes32 plainRecipientPassword) public whenAlive {
+    function withdrawFunds(bytes32 hashedRecipientPassword) public whenAlive {
         require(exchangeShops[msg.sender], "Exchange shop is not a registered exchange shop");
-
-        bytes32 hashedReecipientPassword = generateHash(plainRecipientPassword);
-
-        require(transactions[hashedReecipientPassword].sender != address(0), "Recipient password not valid");
-
-        Transaction storage transaction = transactions[hashedReecipientPassword];
+        
+        Transaction storage transaction = transactions[hashedRecipientPassword];
         uint256 amount = transaction.amount;
         
-        require(amount > 0, "Remittance funds not available");
+        require(amount > 0, "No remittance funds available for this password");
         require(now < transaction.expiration, "Transaction has expired");
         
-        emit LogFundsTransferred(msg.sender, hashedReecipientPassword, amount);
+        emit LogFundsWithdrawn(msg.sender, hashedRecipientPassword, amount);
  
         /**
          * Functional delete of transaction values except sender.
          * The transaction.sender is used in initiateTransfer to check if a password has been used before
          */
-        transactions[hashedReecipientPassword].amount = 0;
-        transactions[hashedReecipientPassword].expiration = 0;
+        transactions[hashedRecipientPassword].amount = 0;
+        transactions[hashedRecipientPassword].expiration = 0;
 
         (bool success, ) = msg.sender.call.value(amount)("");
         require(success, "Transfer failed.");
-   
     }
 
     /**
