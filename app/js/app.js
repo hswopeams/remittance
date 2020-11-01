@@ -116,6 +116,8 @@ window.addEventListener('load', async function() {
         const instance = await Remittance.deployed();
  
         $("#balanceContract").html(await web3.eth.getBalance(instance.address));
+        const balanceExchangeShop = await web3.eth.getBalance(currentAccount);
+         $("#balanceExchangeShop").html(balanceExchangeShop);
        
         // We wire it when the system looks in order.
         $("#registerExchangeShop").click(registerExchangeShop);
