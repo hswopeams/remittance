@@ -4,7 +4,8 @@
   "description": "Remittance",
   "main": "index.js",
   "scripts": {
-    "test": "test"
+    "build": "./node_modules/.bin/webpack-cli --mode development",
+    "dev": "npx http-server ./build/app/ -a 0.0.0.0 -p 8000 -c-1"
   },
   "repository": {
     "type": "git",
