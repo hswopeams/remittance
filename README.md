@@ -11,12 +11,14 @@ I'm not a front-end developer, so the GUI is very simple. It serves only to show
 2. Sender generates password and sends to recipient (out of process). Recipient password is checked to make sure it hasn't been used before. Sender also specifies an expiration as number of days in the future.
 3. Recipient can go to any registered exchange shop to get his/her funds as long as the transaction hasn't expired.
 4. Exchange shop must be registered (Western Union only allows franchisees to operate). Exchange shop proprietor asks
-recipient to provide his/her password in order to withdraw funds. Exchange shop proprietor gives recipient cash (out of  process).
-5. Sender can cancel transfer if it has expired.
-6. Contract owner can register and deregister exchange shops.
+5. recipient to provide his/her password in order to withdraw funds. Exchange shop proprietor gives recipient cash (out of  process).
+6. Sender can cancel transfer if it has expired.
+7. Contract owner can register and deregister exchange shops.
+8. Ownership of the contract can be transferred. 
+9. The contract can be paused and killed.
 
 
-## How to Run
+## How to run locally
 1. Clone this respository
 2. CD to the `remittance` directory
 3. Run `npm install`
