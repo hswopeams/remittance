@@ -2,7 +2,7 @@
 B9lab Academy Project 2
 
 This the second project I developed for the B9lab Academy Ethereum Developer Course. It represents an exchange scenario in which a sender (Alice) sends ETH to someone (Bob). Alice gives Bob a one-time password 
-(this happens outside the scope of the dAPP). Bob goes to any exchange shop franchise (analogous to a Western Union franchise). Bob gives Carol (the exchange shop proprietor) the one-time password he got from Alice, as this is the key to the transfer. Bob provides his password. The exchange shop proprietor (Carol) withdraws the ETH to her own Ethereum account. She gives Bob the cash value of the ETH (this happens outside the scope of teh dApp). If Bob doesn't claim his funds within the specified expiration time, the transfer is invalid, and the funds cannot be withdrawn. After expiration, the transfer can be cancelled by the sender. The funds are returned to the sender.
+(this happens outside the scope of the dAPP). Bob goes to any exchange shop franchise (analogous to a Western Union franchise). Bob gives Carol (the exchange shop proprietor) the one-time password he got from Alice, as this is the key to the transfer. Bob provides his password. The exchange shop proprietor (Carol) withdraws the ETH to her own Ethereum account. She gives Bob the cash value of the ETH (this happens outside the scope of the dApp). If Bob doesn't claim his funds within the specified expiration time, the transfer is invalid, and the funds cannot be withdrawn. After expiration, the transfer can be cancelled by the sender. The funds are returned to the sender.
 
 I'm not a front-end developer, so the GUI is very simple. It serves only to show that I can wire a front-end to a smart contract.
 
@@ -22,7 +22,7 @@ I'm not a front-end developer, so the GUI is very simple. It serves only to show
 1. Clone this respository
 2. CD to the `remittance` directory
 3. Run `npm install`
-4. In a separate terminal,  run `ganache-cli --host 0.0.0.0`. Assumes ganache-cli is installed globally (https://www.npmjs.com/package/ganache-cli)
+4. In a separate terminal,  run `ganache --host 0.0.0.0`. Assumes ganache-cli is installed globally (https://github.com/trufflesuite/ganache)
 5. Take note of the addresses. 
 
 1. In the first terminal, run `./node_modules/.bin/truffle migrate` to migrate contracts to ganache
